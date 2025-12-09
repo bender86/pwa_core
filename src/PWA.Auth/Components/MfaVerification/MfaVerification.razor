@@ -1,0 +1,97 @@
+@if (ShowQrCode && !string.IsNullOrEmpty(QrCodeBase64))
+{
+    <!-- QR Code pour setup initial -->
+    <div class="qr-setup">
+        <h4>?? Scan this QR Code</h4>
+        <p>Use Google Authenticator or similar app</p>
+        <img src="@QrCodeBase64" alt="QR Code" class="qr-code" />
+        
+        @if (!string.IsNullOrEmpty(SecretKey))
+        {
+            <div class="secret-key">
+                <small>Manual key:</small>
+                <code>@SecretKey</code>
+            </div>
+        }
+    </div>
+}
+
+<!-- Formulaire de code MFA (toujours visible) -->
+<div class="mfa-code-form">
+    @if (!ShowQrCode)
+    {
+        <h4>?? Enter Authentication Code</h4>
+        <p>Open your authenticator app and enter the 6-digit code</p>
+    }
+    else
+    {
+        <h4>Confirm Setup</h4>
+        <p>Enter the code from your authenticator app to confirm</p>
+    }
+    
+    <input type="text" 
+           @bind="code" 
+           maxlength="6" 
+           class="form-control code-input" 
+           placeholder="123456"
+           @onkeyup="HandleKeyUp" />
+    
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            @ErrorMessage
+        </div>
+    }
+    
+    <div class="button-group">
+        <button class="btn btn-primary" @onclick="SubmitCode" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+                <span>Verifying...</span>
+            }
+            else
+            {
+                <span>Verify</span>
+            }
+        </button>
+        
+        <button class="btn btn-link" @onclick="Cancel" disabled="@IsLoading">
+            Cancel
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public bool ShowQrCode { get; set; }
+    [Parameter] public string? QrCodeBase64 { get; set; }
+    [Parameter] public string? SecretKey { get; set; }
+    [Parameter] public EventCallback<string> OnMfaCodeSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string code = "";
+
+    private async Task SubmitCode()
+    {
+        if (string.IsNullOrEmpty(code) || code.Length != 6)
+            return;
+            
+        await OnMfaCodeSubmit.InvokeAsync(code);
+    }
+
+    private void HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && code.Length == 6)
+        {
+            _ = SubmitCode();
+        }
+    }
+
+    private async Task Cancel()
+    {
+        code = "";
+        await OnCancel.InvokeAsync();
+    }
+}

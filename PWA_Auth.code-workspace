@@ -1,0 +1,24 @@
+{
+    "folders": [
+        {
+            "name": "PWA.Auth (Main)",
+            "path": "src/PWA.Auth"
+        },
+        {
+            "name": "dto.common",
+            "path": "../../DTO/dto.common"
+        },
+        {
+            "name": "dto.auth",
+            "path": "../../DTO/dto.auth"
+        }
+    ],
+    "settings": {
+        "dotnet.defaultSolution": "PWA_Auth.sln",
+        "files.exclude": {
+            "**/bin": true,
+            "**/obj": true,
+            "**/wwwroot/lib": true
+        }
+    }
+}

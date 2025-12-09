@@ -1,0 +1,79 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <nav class="navbar">
+        <a href="/" class="nav-brand">🔐 MaesAuth</a>
+        <div class="nav-links">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/profile" class="nav-link">Profile</a>
+                    <button class="btn-logout" @onclick="Logout">Logout</button>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </nav>
+    
+    <main>
+        @Body
+    </main>
+</div>
+
+@code {
+    [Inject] private IAuthService AuthService { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        ((CustomAuthStateProvider)AuthStateProvider).NotifyUserLogout();
+        Navigation.NavigateTo("/login");
+    }
+}
+
+<style>
+    .navbar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+    }
+
+    .nav-brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        text-decoration: none;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .nav-link {
+        color: white;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+    }
+
+    .btn-logout {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-logout:hover {
+        background: rgba(255,255,255,0.3);
+    }
+
+    main {
+        flex: 1;
+    }
+</style>

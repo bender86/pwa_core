@@ -1,0 +1,220 @@
+@page "/login"
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Connexion - MaesAuth</PageTitle>
+
+<div class="login-page">
+    <div class="login-card">
+        <div class="logo-section">
+            <h2>🔐 MaesAuth</h2>
+            <p class="subtitle">Système d'authentification centralisé</p>
+        </div>
+
+        @if (!requiresMfa)
+        {
+            <!-- Étape 1 : Login classique -->
+            <LoginForm 
+                IsLoading="@isLoading"
+                ErrorMessage="@errorMessage"
+                OnLoginSubmit="HandleLogin" />
+        }
+        else
+        {
+            <!-- Étape 2 : Vérification MFA -->
+            <MfaVerification 
+                IsLoading="@isLoading"
+                ErrorMessage="@errorMessage"
+                ShowQrCode="@showQrCode"
+                QrCodeBase64="@qrCodeBase64"
+                SecretKey="@secretKey"
+                OnMfaCodeSubmit="HandleMfaVerify"
+                OnCancel="HandleCancelMfa" />
+        }
+    </div>
+</div>
+
+<style>
+    .login-page {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 420px;
+        animation: slideUp 0.4s ease-out;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .logo-section {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .logo-section h2 {
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-size: 1.8rem;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    @@media (max-width: 480px) {
+        .login-card {
+            padding: 1.5rem;
+        }
+
+        .logo-section h2 {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+@code {
+    // État de la page
+    private bool isLoading = false;
+    private string? errorMessage;
+    
+    // État MFA
+    private bool requiresMfa = false;
+    private string? mfaSessionId;
+    private bool showQrCode = false;
+    private string? qrCodeBase64;
+    private string? secretKey;
+
+    /// <summary>
+    /// Gérer la soumission du formulaire de login
+    /// </summary>
+    private async Task HandleLogin(AuthenticateRequest request)
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(request.Email, request.Password);
+
+            if (result.Success && result.Data != null)
+            {
+                if (result.Data.RequiresMfa)
+                {
+                    // MFA requis - passer à l'étape 2
+                    requiresMfa = true;
+                    mfaSessionId = result.Data.MfaSessionId;
+                    
+                    // Si c'est la première configuration MFA (QR code présent)
+                    if (!string.IsNullOrEmpty(result.Data.QrCodeBase64))
+                    {
+                        showQrCode = true;
+                        qrCodeBase64 = result.Data.QrCodeBase64;
+                        secretKey = result.Data.SecretKey;
+                    }
+                }
+                else
+                {
+                    // Login réussi sans MFA - rediriger
+                    await CompleteAuthentication();
+                }
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage  ?? "Identifiants invalides";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de connexion: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Gérer la soumission du code MFA
+    /// </summary>
+    private async Task HandleMfaVerify(string code)
+    {
+        if (string.IsNullOrEmpty(mfaSessionId))
+        {
+            errorMessage = "Session MFA invalide";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.VerifyMfaAsync(mfaSessionId, code);
+
+            if (result.Success && result.Data?.Success == true)
+            {
+                // MFA vérifié avec succès - rediriger
+                await CompleteAuthentication();
+            }
+            else
+            {
+                errorMessage = result.Data?.Message ?? "Code MFA invalide";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de vérification: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Annuler le processus MFA et revenir au login
+    /// </summary>
+    private void HandleCancelMfa()
+    {
+        requiresMfa = false;
+        mfaSessionId = null;
+        showQrCode = false;
+        qrCodeBase64 = null;
+        secretKey = null;
+        errorMessage = null;
+    }
+
+    /// <summary>
+    /// Finaliser l'authentification et notifier Blazor
+    /// </summary>
+    private async Task CompleteAuthentication()
+    {
+        // Notifier le système d'authentification
+        ((CustomAuthStateProvider)AuthStateProvider).NotifyUserAuthentication();
+        
+        // Rediriger vers la page d'accueil
+        Navigation.NavigateTo("/");
+    }
+}

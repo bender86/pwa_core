@@ -1,0 +1,539 @@
+@page "/profile"
+@attribute [Authorize]
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Profile - MaesAuth</PageTitle>
+
+<div class="profile-page">
+    <div class="profile-card">
+        <h2>👤 My Profile</h2>
+        
+        @if (user != null)
+        {
+            <div class="user-info">
+                <p><strong>Email:</strong> @user.Email</p>
+                <p><strong>User ID:</strong> @user.Id</p>
+                <p><strong>Admin:</strong> @(user.Admin == 1 ? "Yes" : "No")</p>
+            </div>
+
+            <hr />
+
+            <div class="mfa-section">
+                <h3>🔒 Two-Factor Authentication (MFA)</h3>
+                
+                @if (!mfaEnabled)
+                {
+                    <!-- MFA pas encore activé -->
+                    <p class="mfa-status">Status: <span class="badge badge-warning">Disabled</span></p>
+                    <p>Protect your account with two-factor authentication.</p>
+                    
+                    @if (!showQrCode)
+                    {
+                        <button class="btn btn-primary" @onclick="EnableMfa" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm"></span>
+                                <span>Loading...</span>
+                            }
+                            else
+                            {
+                                <span>Enable MFA</span>
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        <!-- Afficher le QR code -->
+                        <div class="qr-setup">
+                            <h4>📱 Scan this QR Code</h4>
+                            <p>Use Google Authenticator, Authy, or Microsoft Authenticator</p>
+                            
+                            @if (!string.IsNullOrEmpty(qrCodeBase64))
+                            {
+                                <img src="@qrCodeBase64" alt="QR Code" class="qr-code" />
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(secretKey))
+                            {
+                                <div class="secret-key">
+                                    <small>Manual key:</small>
+                                    <code>@secretKey</code>
+                                </div>
+                            }
+                            
+                            <!-- Formulaire de confirmation -->
+                            <div class="confirm-mfa">
+                                <label>Enter the 6-digit code to confirm:</label>
+                                <input type="text" 
+                                       @bind="confirmCode" 
+                                       maxlength="6" 
+                                       class="form-control code-input" 
+                                       placeholder="123456" />
+                                
+                                <button class="btn btn-success" @onclick="ConfirmMfa" disabled="@isLoading">
+                                    Confirm & Activate MFA
+                                </button>
+                                <button class="btn btn-link" @onclick="CancelMfaSetup">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <!-- MFA d�j� activ� -->
+                    <p class="mfa-status">Status: <span class="badge badge-success">Enabled ?</span></p>
+                    <p>Your account is protected with two-factor authentication.</p>
+                    
+                    @if (!showDisableMfaForm)
+                    {
+                        <button class="btn btn-danger" @onclick="ShowDisableMfaForm" disabled="@isLoading">
+                            Disable MFA
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="disable-mfa-form">
+                            <h4>?? Disable MFA</h4>
+                            <p>Enter your current authentication code to confirm:</p>
+                            
+                            <input type="text" 
+                                @bind="disableMfaCode" 
+                                maxlength="6" 
+                                class="form-control code-input" 
+                                placeholder="123456" />
+                            
+                            <div class="button-group">
+                                <button class="btn btn-danger" @onclick="ConfirmDisableMfa" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                        <span>Disabling...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Confirm Disable</span>
+                                    }
+                                </button>
+                                <button class="btn btn-secondary" @onclick="CancelDisableMfa" disabled="@isLoading">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">
+                    @successMessage
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .profile-page {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 2rem;
+        background: #f5f5f5;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        max-width: 600px;
+        width: 100%;
+    }
+
+    .profile-card h2 {
+        margin-bottom: 1.5rem;
+        color: #333;
+    }
+
+    .user-info {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .user-info p {
+        margin: 0.5rem 0;
+    }
+
+    hr {
+        margin: 2rem 0;
+        border: none;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .mfa-section h3 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .mfa-status {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .badge-warning {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .badge-success {
+        background: #28a745;
+        color: white;
+    }
+
+    .qr-setup {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        text-align: center;
+    }
+
+    .qr-code {
+        max-width: 200px;
+        margin: 1rem auto;
+        display: block;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 0.5rem;
+        background: white;
+    }
+
+    .secret-key {
+        margin: 1rem 0;
+    }
+
+    .secret-key code {
+        background: white;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+
+    .confirm-mfa {
+        margin-top: 1.5rem;
+    }
+
+    .code-input {
+        text-align: center;
+        font-size: 1.5rem;
+        letter-spacing: 0.5rem;
+        font-weight: bold;
+        margin: 1rem 0;
+        padding: 0.75rem;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        width: 100%;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin: 0.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-link {
+        background: none;
+        color: #667eea;
+        text-decoration: none;
+    }
+
+    .btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .alert-danger {
+        background: #fee;
+        color: #c33;
+        border: 1px solid #fcc;
+    }
+
+    .alert-success {
+        background: #efe;
+        color: #3c3;
+        border: 1px solid #cfc;
+    }
+
+    .disable-mfa-form {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .disable-mfa-form h4 {
+        color: #856404;
+        margin-bottom: 1rem;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .spinner-border {
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        display: inline-block;
+        animation: spinner 0.75s linear infinite;
+        margin-right: 0.5rem;
+    }
+
+    @@keyframes spinner { {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    private AuthenticateResponse? user;
+    private bool mfaEnabled = false;
+    private bool isLoading = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // MFA Setup
+    private bool showQrCode = false;
+    private string? qrCodeBase64;
+    private string? secretKey;
+    private string confirmCode = "";
+    
+    // MFA Disable
+    private bool showDisableMfaForm = false;
+    private string disableMfaCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+    }
+    
+    private async Task LoadUserProfile()
+    {
+        user = await AuthService.GetCurrentUserAsync();
+        
+        if (user != null)
+        {
+            // Vérifier si MFA est activé depuis les données utilisateur
+            mfaEnabled = user.MfaEnabled;
+        }
+    }
+
+    private async Task EnableMfa()
+    {
+        if (user == null) return;
+        
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var result = await AuthService.EnableMfaAsync(user.Id);
+            
+            if (result.Success && result.Data != null)
+            {
+                showQrCode = true;
+                qrCodeBase64 = result.Data.QrCodeBase64;
+                secretKey = result.Data.SecretKey;
+                successMessage = "Scan the QR code with your authenticator app";
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Failed to enable MFA";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ConfirmMfa()
+    {
+        if (user == null || string.IsNullOrEmpty(confirmCode) || confirmCode.Length != 6)
+        {
+            errorMessage = "Please enter a valid 6-digit code";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.ConfirmMfaSetupAsync(user.Id, confirmCode);
+            
+            if (result.Success)
+            {
+                successMessage = "MFA activated successfully! ✔";
+                mfaEnabled = true;
+                showQrCode = false;
+                confirmCode = "";
+                
+                // Rafraîchir le profil
+                await LoadUserProfile();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Invalid code";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void CancelMfaSetup()
+    {
+        showQrCode = false;
+        qrCodeBase64 = null;
+        secretKey = null;
+        confirmCode = "";
+        errorMessage = null;
+        successMessage = null;
+    }
+    
+    private void ShowDisableMfaForm()
+    {
+        showDisableMfaForm = true;
+        disableMfaCode = "";
+        errorMessage = null;
+        successMessage = null;
+    }
+    
+    private void CancelDisableMfa()
+    {
+        showDisableMfaForm = false;
+        disableMfaCode = "";
+        errorMessage = null;
+    }
+
+    private async Task ConfirmDisableMfa()
+    {
+        if (user == null || string.IsNullOrEmpty(disableMfaCode) || disableMfaCode.Length != 6)
+        {
+            errorMessage = "Please enter a valid 6-digit code";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            
+            var result = await AuthService.DisableMfaAsync(user.Id, disableMfaCode);
+            
+            if (result.Success)
+            {
+                successMessage = "MFA disabled successfully";
+                mfaEnabled = false;
+                showDisableMfaForm = false;
+                disableMfaCode = "";
+                
+                // Rafraîchir le profil
+                await LoadUserProfile();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Failed to disable MFA";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
