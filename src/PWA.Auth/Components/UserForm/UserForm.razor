@@ -1,8 +1,8 @@
 @* Components/UserForm/UserForm.razor *@
-@using PWA.Auth.Models
+@using dto.common.Enums
 @using dto.user.Enums
-@using dto.user.Models;
-@using dto.common.Enums;
+@using dto.user.Models
+@using PWA.Auth.Models
 
 <div class="user-form">
     @if (!string.IsNullOrEmpty(ErrorMessage))
@@ -19,30 +19,30 @@
         {
             <!-- Champs pour création -->
             <div class="form-group">
-                <label>Email</label>
-                <InputText @bind-Value="model.Email" 
+                <label>Prénom</label>
+                <InputText @bind-Value="model.FirstName" 
                            class="form-control" 
-                           placeholder="email@example.com"
+                           placeholder="Prénom"
                            disabled="@IsLoading" />
-                <ValidationMessage For="@(() => model.Email)" />
+                <ValidationMessage For="@(() => model.FirstName)" />
             </div>
 
             <div class="form-group">
                 <label>Nom</label>
                 <InputText @bind-Value="model.LastName" 
                            class="form-control" 
-                           placeholder="LastName"
+                           placeholder="Nom"
                            disabled="@IsLoading" />
                 <ValidationMessage For="@(() => model.LastName)" />
             </div>
 
             <div class="form-group">
-                <label>Prénom</label>
-                <InputText @bind-Value="model.FirstName" 
+                <label>Email</label>
+                <InputText @bind-Value="model.Email" 
                            class="form-control" 
-                           placeholder="FirstName"
+                           placeholder="email@example.com"
                            disabled="@IsLoading" />
-                <ValidationMessage For="@(() => model.FirstName)" />
+                <ValidationMessage For="@(() => model.Email)" />
             </div>
 
             <div class="form-group">
@@ -82,29 +82,29 @@
         {
             <!-- Champs pour édition -->
             <div class="form-group">
-                <label>Email</label>
-                <InputText @bind-Value="model.Email" 
+                <label>Prénom</label>
+                <InputText @bind-Value="model.FirstName" 
                            class="form-control" 
+                           placeholder="Prénom"
                            disabled="@IsLoading" />
-                <ValidationMessage For="@(() => model.Email)" />
+                <ValidationMessage For="@(() => model.FirstName)" />
             </div>
 
             <div class="form-group">
                 <label>Nom</label>
                 <InputText @bind-Value="model.LastName" 
                            class="form-control" 
-                           placeholder="LastName"
+                           placeholder="Nom"
                            disabled="@IsLoading" />
                 <ValidationMessage For="@(() => model.LastName)" />
             </div>
 
             <div class="form-group">
-                <label>Prénom</label>
-                <InputText @bind-Value="model.FirstName" 
+                <label>Email</label>
+                <InputText @bind-Value="model.Email" 
                            class="form-control" 
-                           placeholder="FirstName"
                            disabled="@IsLoading" />
-                <ValidationMessage For="@(() => model.FirstName)" />
+                <ValidationMessage For="@(() => model.Email)" />
             </div>
 
             @if (ShowAdminOptions)
@@ -130,13 +130,14 @@
                 </div>
             }
 
+            <!-- ✅ Toggle MFA toujours visible en mode Edit -->
             <div class="form-check">
                 <InputCheckbox @bind-Value="model.MfaEnabled" 
                                class="form-check-input" 
                                id="mfaEnabled"
                                disabled="@IsLoading" />
                 <label class="form-check-label" for="mfaEnabled">
-                    Authentification à deux facteurs (MFA)
+                    🔐 Authentification à deux facteurs (MFA)
                 </label>
             </div>
 
@@ -186,9 +187,9 @@
             model = new UserFormModel
             {
                 Id = InitialData.Id,
-                Email = InitialData.Email,
-                LastName = InitialData.LastName,
                 FirstName = InitialData.FirstName,
+                LastName = InitialData.LastName,
+                Email = InitialData.Email,
                 Password = InitialData.Password,
                 IsAdmin = InitialData.IsAdmin,
                 Active = InitialData.Active,
