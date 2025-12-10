@@ -1,0 +1,111 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@using dto.user.Models
+@using dto.common.Models
+@using dto.user.Enums
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<h2>Gestion des utilisateurs</h2>
+
+@if (isLoading)
+{
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Chargement...</span>
+    </div>
+}
+else if (users != null)
+{
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="NavigateToCreate">
+            ➕ Créer un utilisateur
+        </button>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>LastName</th>
+                <th>Admin</th>
+                <th>Actif</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Id</td>
+                    <td>@user.Email</td>
+                    <td>@user.LastName</td>
+                    <td>@(user.IsAdmin == true ? "✅" : "❌")</td>
+                    <td>@(user.Active ==true ? "✅" : "❌")</td>
+                    <td>@user.Status</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" @onclick="() => NavigateToEdit(user.Id)">
+                            ✏️ Éditer
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+
+@code {
+    private List<UserResponse>? users;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await UserService.GetAllUsers();
+
+            if (result.Success)
+            {
+                users = result.Data;
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NavigateToCreate()
+    {
+        Navigation.NavigateTo("/admin/users/create");
+    }
+
+    private void NavigateToEdit(int userId)
+    {
+        Navigation.NavigateTo($"/admin/users/edit/{userId}");
+    }
+}

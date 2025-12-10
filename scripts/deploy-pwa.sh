@@ -22,8 +22,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # Copie des fichiers vers le site
-echo -e "${BLUE}?? Copie des fichiers...${NC}"
-sudo rsync -av -av --exclude='.env'  /home/admin_maef/Projects/PWA/pwa_core/src/PWA.Auth/out/wwwroot/ /var/www/PWA_Auth/
+echo -e "${BLUE}?? Copie des fichiers sauf env et appsettings...${NC}"
+sudo rsync -av --delete --exclude='appsettings.json' \ --exclude='.env'  /home/admin_maef/Projects/PWA/pwa_core/src/PWA.Auth/out/wwwroot/ /var/www/PWA_Auth/
 
 
 echo -e "\n${GREEN}? D�ploiement r�ussi ! La PWA est disponible.${NC}"

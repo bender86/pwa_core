@@ -52,7 +52,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             };
 
             // Add admin role if applicable
-            if (user.Admin == 1)
+            if (user.Admin == true)
             {
                 claims.Add(new Claim(ClaimTypes.Role, "Admin"));
             }

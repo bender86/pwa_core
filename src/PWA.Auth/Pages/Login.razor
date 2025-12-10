@@ -19,6 +19,14 @@
                 IsLoading="@isLoading"
                 ErrorMessage="@errorMessage"
                 OnLoginSubmit="HandleLogin" />
+                
+            <!-- Alternative avec un bouton -->
+            <div class="register-section">
+                <p>Pas encore de compte ?</p>
+                <button class="btn btn-outline-primary btn-block" @onclick="NavigateToRegister">
+                    ➕ Créer un compte
+                </button>
+            </div>
         }
         else
         {
@@ -83,6 +91,37 @@
         margin: 0;
     }
 
+    /* ✅ Styles pour le lien d'inscription */
+    .register-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .register-link p {
+        margin: 0 0 0.5rem 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .register-link .btn-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0;
+        transition: color 0.2s;
+    }
+
+    .register-link .btn-link:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
     @@media (max-width: 480px) {
         .login-card {
             padding: 1.5rem;
@@ -91,6 +130,34 @@
         .logo-section h2 {
             font-size: 1.5rem;
         }
+    }
+    .register-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e0e0e0;
+        text-align: center;
+    }
+
+    .register-section p {
+        margin: 0 0 1rem 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .btn-outline-primary {
+        color: #667eea;
+        border: 2px solid #667eea;
+        background: transparent;
+        padding: 0.6rem 1.2rem;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-outline-primary:hover {
+        background: #667eea;
+        color: white;
     }
 </style>
 
@@ -142,7 +209,7 @@
             }
             else
             {
-                errorMessage = result.ErrorMessage  ?? "Identifiants invalides";
+                errorMessage = result.ErrorMessage ?? "Identifiants invalides";
             }
         }
         catch (Exception ex)
@@ -216,5 +283,13 @@
         
         // Rediriger vers la page d'accueil
         Navigation.NavigateTo("/");
+    }
+
+    /// <summary>
+    /// ✅ Naviguer vers la page d'inscription
+    /// </summary>
+    private void NavigateToRegister()
+    {
+        Navigation.NavigateTo("/register");
     }
 }

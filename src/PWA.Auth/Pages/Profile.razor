@@ -14,7 +14,7 @@
             <div class="user-info">
                 <p><strong>Email:</strong> @user.Email</p>
                 <p><strong>User ID:</strong> @user.Id</p>
-                <p><strong>Admin:</strong> @(user.Admin == 1 ? "Yes" : "No")</p>
+                <p><strong>Admin:</strong> @(user.Admin == true ? "Yes" : "No")</p>
             </div>
 
             <hr />
@@ -392,7 +392,7 @@
         if (user != null)
         {
             // Vérifier si MFA est activé depuis les données utilisateur
-            mfaEnabled = user.MfaEnabled;
+            mfaEnabled = (bool)user.MfaEnabled;
         }
     }
 

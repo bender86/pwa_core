@@ -2,6 +2,18 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "clean",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "clean",
+                "${workspaceFolder}/PWA.Auth.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "build",
             "command": "dotnet",
             "type": "process",
@@ -17,9 +29,37 @@
             }
         },
         {
-            "label": " Deploy PWA",
+            "label": "run",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/PWA.Auth.csproj"
+            ],
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "?? Clean/Build/Run",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "clean",
+                "build",
+                "run"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "?? Deploy PWA",
             "type": "shell",
-            "command": "../../scripts/deploy-pwa.sh",
+            "command": "${workspaceFolder}/scripts/deploy-pwa.sh",
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always",

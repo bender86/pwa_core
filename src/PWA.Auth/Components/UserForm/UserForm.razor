@@ -1,0 +1,212 @@
+@* Components/UserForm/UserForm.razor *@
+@using PWA.Auth.Models
+@using dto.user.Enums
+@using dto.user.Models;
+@using dto.common.Enums;
+
+<div class="user-form">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            @ErrorMessage
+        </div>
+    }
+
+    <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        
+        @if (Mode == FormMode.Create)
+        {
+            <!-- Champs pour création -->
+            <div class="form-group">
+                <label>Email</label>
+                <InputText @bind-Value="model.Email" 
+                           class="form-control" 
+                           placeholder="email@example.com"
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.Email)" />
+            </div>
+
+            <div class="form-group">
+                <label>Nom</label>
+                <InputText @bind-Value="model.LastName" 
+                           class="form-control" 
+                           placeholder="LastName"
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.LastName)" />
+            </div>
+
+            <div class="form-group">
+                <label>Prénom</label>
+                <InputText @bind-Value="model.FirstName" 
+                           class="form-control" 
+                           placeholder="FirstName"
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.FirstName)" />
+            </div>
+
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <InputText type="password" 
+                           @bind-Value="model.Password" 
+                           class="form-control" 
+                           placeholder="••••••••"
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.Password)" />
+            </div>
+
+            @if (ShowAdminOptions)
+            {
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="model.IsAdmin" 
+                                   class="form-check-input" 
+                                   id="isAdmin"
+                                   disabled="@IsLoading" />
+                    <label class="form-check-label" for="isAdmin">
+                        Administrateur
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="model.Active" 
+                                   class="form-check-input" 
+                                   id="isActive"
+                                   disabled="@IsLoading" />
+                    <label class="form-check-label" for="isActive">
+                        Actif
+                    </label>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- Champs pour édition -->
+            <div class="form-group">
+                <label>Email</label>
+                <InputText @bind-Value="model.Email" 
+                           class="form-control" 
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.Email)" />
+            </div>
+
+            <div class="form-group">
+                <label>Nom</label>
+                <InputText @bind-Value="model.LastName" 
+                           class="form-control" 
+                           placeholder="LastName"
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.LastName)" />
+            </div>
+
+            <div class="form-group">
+                <label>Prénom</label>
+                <InputText @bind-Value="model.FirstName" 
+                           class="form-control" 
+                           placeholder="FirstName"
+                           disabled="@IsLoading" />
+                <ValidationMessage For="@(() => model.FirstName)" />
+            </div>
+
+            @if (ShowAdminOptions)
+            {
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="model.IsAdmin" 
+                                   class="form-check-input" 
+                                   id="isAdminEdit"
+                                   disabled="@IsLoading" />
+                    <label class="form-check-label" for="isAdminEdit">
+                        Administrateur
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="model.Active" 
+                                   class="form-check-input" 
+                                   id="isActiveEdit"
+                                   disabled="@IsLoading" />
+                    <label class="form-check-label" for="isActiveEdit">
+                        Actif
+                    </label>
+                </div>
+            }
+
+            <div class="form-check">
+                <InputCheckbox @bind-Value="model.MfaEnabled" 
+                               class="form-check-input" 
+                               id="mfaEnabled"
+                               disabled="@IsLoading" />
+                <label class="form-check-label" for="mfaEnabled">
+                    Authentification à deux facteurs (MFA)
+                </label>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <small>Pour changer votre mot de passe, utilisez la page dédiée.</small>
+            </div>
+        }
+
+        <button type="submit" class="btn btn-primary btn-block mt-3" disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+                <span>Enregistrement...</span>
+            }
+            else
+            {
+                <span>@(Mode == FormMode.Create ? "Créer" : "Mettre à jour")</span>
+            }
+        </button>
+
+        @if (Mode == FormMode.Edit && ShowCancelButton)
+        {
+            <button type="button" class="btn btn-secondary btn-block mt-2" @onclick="OnCancel" disabled="@IsLoading">
+                Annuler
+            </button>
+        }
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public FormMode Mode { get; set; }
+    [Parameter] public UserFormModel? InitialData { get; set; }
+    [Parameter] public EventCallback<UserFormModel> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public bool ShowAdminOptions { get; set; } = false;
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
+
+    private UserFormModel model = new();
+
+    protected override void OnParametersSet()
+    {
+        if (InitialData != null)
+        {
+            // Copier les données initiales dans le modèle
+            model = new UserFormModel
+            {
+                Id = InitialData.Id,
+                Email = InitialData.Email,
+                LastName = InitialData.LastName,
+                FirstName = InitialData.FirstName,
+                Password = InitialData.Password,
+                IsAdmin = InitialData.IsAdmin,
+                Active = InitialData.Active,
+                MfaEnabled = InitialData.MfaEnabled
+            };
+        }
+        else
+        {
+            // Nouveau formulaire vide
+            model = new UserFormModel
+            {
+                Active = true // Par défaut actif pour la création
+            };
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        await OnSubmit.InvokeAsync(model);
+    }
+}

@@ -1,0 +1,57 @@
+@page "/admin/users/create"
+@using PWA.Auth.Models
+@using dto.user.Models
+@attribute [Authorize(Roles = "Admin")]
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<h2>Créer un utilisateur</h2>
+
+<UserForm Mode="UserFormMode.Create"
+          OnSubmit="HandleCreate"
+          IsLoading="isLoading"
+          ErrorMessage="@errorMessage"
+          ShowAdminOptions="true" />
+
+@code {
+    private bool isLoading;
+    private string? errorMessage;
+
+    private async Task HandleCreate(UserFormModel model)
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreateUserRequest
+            {
+                Email = model.Email,
+                LastName = model.LastName,
+                FirstName = model.FirstName,
+                Password = model.Password!,
+                IsAdmin = model.IsAdmin,
+                Active = model.Active
+            };
+
+            var result = await UserService.CreateUser(request);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/admin/users");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

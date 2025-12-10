@@ -1,6 +1,6 @@
 
-using Dto.Auth.Models;
-using Dto.Common.Models;
+using dto.auth.Models;
+using dto.common.Models;
 
 namespace PWA.Auth.Services;
 

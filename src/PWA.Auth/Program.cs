@@ -24,6 +24,7 @@ builder.Services.AddAuthorizationCore(); // Support pour [Authorize]
 
 // Enregistrer nos services personnalisés
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 
 

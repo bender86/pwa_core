@@ -32,7 +32,12 @@
 
         protected override void OnInitialized()
         {
-            Navigation.NavigateTo("/login");
+            // Rediriger vers /login si on est � la racine
+            var uri = new Uri(Navigation.Uri);
+            if (uri.AbsolutePath == "/")
+            {
+                Navigation.NavigateTo("/login", replace: true);
+            }
         }
     }
 }

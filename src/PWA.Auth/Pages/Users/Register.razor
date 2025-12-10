@@ -1,0 +1,137 @@
+@page "/register"
+@using PWA.Auth.Components.UserForm
+@using PWA.Auth.Models
+@using dto.user.Models
+@using dto.common.Enums
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<PageTitle>Créer un compte - MaesAuth</PageTitle>
+
+<div class="register-page">
+    <div class="register-card">
+        <div class="logo-section">
+            <h2>🔐 MaesAuth</h2>
+            <p class="subtitle">Créer votre compte</p>
+        </div>
+
+        @if (!registrationSuccess)
+        {
+            <UserForm Mode="FormMode.Create"
+                      OnSubmit="HandleRegister"
+                      IsLoading="isLoading"
+                      ErrorMessage="@errorMessage"
+                      ShowAdminOptions="false"
+                      ShowCancelButton="true"
+                      OnCancel="NavigateToLogin" />
+        }
+        else
+        {
+            <div class="alert alert-success">
+                <h4>✅ Demande envoyée !</h4>
+                <p>Votre demande de création de compte a été envoyée.</p>
+                <p>Un administrateur validera votre compte sous peu.</p>
+                <button class="btn btn-primary mt-3" @onclick="NavigateToLogin">
+                    Retour à la connexion
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .register-page {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+    }
+
+    .register-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 420px;
+        animation: slideUp 0.4s ease-out;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .logo-section {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .logo-section h2 {
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-size: 1.8rem;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+</style>
+
+@code {
+    private bool isLoading;
+    private string? errorMessage;
+    private bool registrationSuccess;
+
+    private async Task HandleRegister(UserFormModel model)
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreateUserRequest
+            {
+                Email = model.Email,
+                LastName = model.LastName,
+                FirstName = model.FirstName,
+                Password = model.Password!
+                // Pas de IsAdmin/Active - définis côté serveur
+            };
+
+            var result = await UserService.CreateUser(request);
+
+            if (result.Success)
+            {
+                registrationSuccess = true;
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NavigateToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

@@ -11,6 +11,10 @@
         {
             "name": "dto.auth",
             "path": "../../DTO/dto.auth"
+        },
+        {
+            "name": "dto.user",
+            "path": "../../DTO/dto.user"
         }
     ],
     "settings": {
