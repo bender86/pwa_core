@@ -1,4 +1,8 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@using dto.auth.Models
+@using dto.user.Models
+@inject IAuthService AuthService
 
 <div class="page">
     <nav class="navbar">
@@ -6,8 +10,32 @@
         <div class="nav-links">
             <AuthorizeView>
                 <Authorized>
-                    <a href="/profile" class="nav-link">Profile</a>
-                    <button class="btn-logout" @onclick="Logout">Logout</button>
+                    <div class="user-menu" tabindex="0">
+                        <div class="user-info">
+                            <span class="user-avatar">👤</span>
+                            <span class="user-name">@userName</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        
+                        <div class="dropdown-menu">
+                            <a href="/profile" class="dropdown-item">
+                                <span class="item-icon">👤</span>
+                                <span>Mon Profil</span>
+                            </a>
+                            @if (isAdmin)
+                            {
+                                <a href="/admin" class="dropdown-item">
+                                    <span class="item-icon">⚙️</span>
+                                    <span>Administration</span>
+                                </a>
+                            }
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item logout" @onclick="HandleLogout" type="button">
+                                <span class="item-icon">🚪</span>
+                                <span>Déconnexion</span>
+                            </button>
+                        </div>
+                    </div>
                 </Authorized>
             </AuthorizeView>
         </div>
@@ -19,19 +47,103 @@
 </div>
 
 @code {
-    [Inject] private IAuthService AuthService { get; set; } = null!;
     [Inject] private NavigationManager Navigation { get; set; } = null!;
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
+    
+    private string userName = "Utilisateur";
+    private bool showDropdown = false;
+    private bool isAdmin = false;
 
-    private async Task Logout()
+    protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine($"?? OnInitializedAsync");
+        // Charger le nom initial
+        await LoadUserName();
+        
+        // Écouter les changements d'authentification
+        ((CustomAuthStateProvider)AuthStateProvider).AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        await LoadUserName();
+        StateHasChanged(); // Force le rafraîchissement
+    }
+
+    private async Task LoadUserName()
+    {
+        try
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            Console.WriteLine($"?? LoadUserName - User: {user?.Email}");
+            
+            if (user != null)
+            {
+                // V�rifier si admin
+                // V�rifier si admin
+                isAdmin = user.Admin ?? false;
+                Console.WriteLine($"?? IsAdmin: {isAdmin}");
+                Console.WriteLine($"?? User.Admin property: {user.Admin}");
+                
+                // Priorit� : FirstName + LastName, sinon Email
+                if (!string.IsNullOrEmpty(user.FirstName) || !string.IsNullOrEmpty(user.LastName))
+                {
+                    userName = $"{user.FirstName} {user.LastName}".Trim();
+                }
+                else
+                {
+                    userName = user.Email?.Split('@')[0] ?? "Utilisateur";
+                }
+            }
+            else
+            {
+                Console.WriteLine("?? User is NULL");
+                userName = "Utilisateur";
+                isAdmin = false;
+            }
+        }
+        catch
+        {
+            userName = "Utilisateur";
+            isAdmin = false;
+        }
+    }
+
+    private void ToggleDropdown()
+    {
+        Console.WriteLine($"🔍 ToggleDropdown called. Current state: {showDropdown}");
+        showDropdown = !showDropdown;
+        Console.WriteLine($"🔍 New state: {showDropdown}");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseDropdown()
+    {
+        showDropdown = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleLogout()
+    {
+        showDropdown = false;
         await AuthService.LogoutAsync();
         ((CustomAuthStateProvider)AuthStateProvider).NotifyUserLogout();
         Navigation.NavigateTo("/login");
     }
+
+    public void Dispose()
+    {
+        ((CustomAuthStateProvider)AuthStateProvider).AuthenticationStateChanged -= OnAuthStateChanged;
+    }
 }
 
 <style>
+    .page {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
     .navbar {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 1rem 2rem;
@@ -39,6 +151,7 @@
         justify-content: space-between;
         align-items: center;
         color: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
     .nav-brand {
@@ -46,6 +159,11 @@
         font-weight: bold;
         color: white;
         text-decoration: none;
+        transition: opacity 0.2s;
+    }
+
+    .nav-brand:hover {
+        opacity: 0.9;
     }
 
     .nav-links {
@@ -54,26 +172,130 @@
         align-items: center;
     }
 
-    .nav-link {
-        color: white;
-        text-decoration: none;
-        padding: 0.5rem 1rem;
+    /* Menu utilisateur */
+    .user-menu {
+        position: relative;
+        z-index: 1000;
     }
 
-    .btn-logout {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        border: none;
+    .user-menu:focus-within .dropdown-menu,
+    .user-menu:hover .dropdown-menu {
+        display: block;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         padding: 0.5rem 1rem;
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        transition: all 0.2s;
         cursor: pointer;
     }
 
-    .btn-logout:hover {
-        background: rgba(255,255,255,0.3);
+    .user-info:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .user-avatar {
+        font-size: 1.2rem;
+    }
+
+    .user-name {
+        font-weight: 500;
+        color: white;
+    }
+
+    .dropdown-arrow {
+        font-size: 0.7rem;
+        margin-left: 0.3rem;
+        transition: transform 0.2s;
+    }
+
+    /* Dropdown menu */
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        right: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        min-width: 200px;
+        overflow: hidden;
+        animation: slideDown 0.2s ease-out;
+        z-index: 2000;
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: #333;
+        text-decoration: none;
+        background: white;
+        border: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 0.95rem;
+    }
+
+    .dropdown-item:hover {
+        background: #f5f5f5;
+    }
+
+    .dropdown-item.logout {
+        color: #dc3545;
+    }
+
+    .dropdown-item.logout:hover {
+        background: #fff5f5;
+    }
+
+    .item-icon {
+        font-size: 1.1rem;
+        width: 1.5rem;
+        text-align: center;
+    }
+
+    .dropdown-divider {
+        height: 1px;
+        background: #e0e0e0;
+        margin: 0.25rem 0;
     }
 
     main {
         flex: 1;
+        padding: 2rem;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .navbar {
+            padding: 1rem;
+        }
+
+        .user-name {
+            display: none;
+        }
+
+        .dropdown-menu {
+            right: -1rem;
+        }
     }
 </style>

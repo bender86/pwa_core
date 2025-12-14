@@ -25,8 +25,9 @@
     }
     else
     {
-        <h4>Confirm Setup</h4>
-        <p>Enter the code from your authenticator app to confirm</p>
+        <!-- Mode Verify: Pas de QR, juste demander le code -->
+        <h4>🔐 Vérification MFA</h4>
+        <p class="instruction">@PromptMessage</p>
     }
     
     <input type="text" 
@@ -62,14 +63,24 @@
     </div>
 </div>
 
+<style>
+    .qr-code{
+        width:60%;
+    }
+</style>
+
 @code {
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public string? ErrorMessage { get; set; }
-    [Parameter] public bool ShowQrCode { get; set; }
+    [Parameter] public bool ShowQrCode { get; set; } = false;
     [Parameter] public string? QrCodeBase64 { get; set; }
     [Parameter] public string? SecretKey { get; set; }
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
     [Parameter] public EventCallback<string> OnMfaCodeSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    
+    // ✅ Ajouter ce paramètre
+    [Parameter] public string PromptMessage { get; set; } = "Entrez votre code d'authentification à deux facteurs";
 
     private string code = "";
 

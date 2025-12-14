@@ -1,0 +1,559 @@
+@page "/profile"
+@page "/user/profile"  
+@attribute [Authorize]
+@using dto.user.Models
+@using PWA.Auth.Models
+@using dto.common.Enums
+
+@inject IUserService UserService
+@inject IMfaService MfaService
+@inject NavigationManager Navigation
+
+<PageTitle>Mon profil - MaesAuth</PageTitle>
+
+<div class="profile-page">
+    <div class="profile-container">
+        <div class="profile-header">
+            <h2>👤 Mon Profil</h2>
+            <p class="subtitle">Gérer vos informations personnelles</p>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+            </div>
+        }
+        else if (model != null)
+        {
+            <div class="profile-content">
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        ✅ @successMessage
+                    </div>
+                }
+
+                <!-- ✅ UserForm pour les champs classiques (SANS MFA dedans) -->
+                <UserForm Mode="FormMode.Edit"
+                          InitialData="@model"
+                          OnSubmit="HandleUpdateProfile"
+                          OnCancel="LoadProfile"
+                          IsLoading="@isSaving"
+                          ErrorMessage="@errorMessage"
+                          ShowAdminOptions="false"
+                          ShowCancelButton="true" />
+
+                <!-- ✅ Section MFA séparée avec son propre toggle -->
+                <div class="mfa-section">
+                    <h4>🔐 Sécurité</h4>
+                    <div class="form-check">
+                        <input type="checkbox" 
+                               class="form-check-input" 
+                               id="mfaToggle"
+                               checked="@currentMfaEnabled"
+                               @onchange="HandleMfaToggle"
+                               disabled="@isSaving" />
+                        <label class="form-check-label" for="mfaToggle">
+                            Authentification à deux facteurs (MFA)
+                        </label>
+                    </div>
+                    <small class="mfa-status">
+                        @if (currentMfaEnabled)
+                        {
+                            <span class="status-active">✓ MFA activé - Votre compte est protégé</span>
+                        }
+                        else
+                        {
+                            <span class="status-inactive">⚠️ MFA désactivé - Activez-le pour plus de sécurité</span>
+                        }
+                    </small>
+                </div>
+
+                <!-- Section changement de mot de passe -->
+                <div class="password-section">
+                    <p class="text-muted">
+                        Pour changer votre mot de passe, utilisez la page dédiée.
+                    </p>
+                    <button type="button" 
+                            class="btn btn-outline-secondary btn-block"
+                            @onclick="NavigateToChangePassword"
+                            disabled="@isSaving">
+                        🔑 Changer mon mot de passe
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                Impossible de charger votre profil. Veuillez vous reconnecter.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ✅ Modale Setup MFA (Enable avec QR Code) -->
+@if (showMfaSetupModal)
+{
+    <div class="modal-overlay" @onclick="CloseMfaSetupModal">
+        <div class="modal-content" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3>Activer l'authentification à deux facteurs</h3>
+                <button class="btn-close" @onclick="CloseMfaSetupModal">×</button>
+            </div>
+            <div class="modal-body">
+                <MfaVerification 
+                    IsLoading="@isMfaSetupLoading"
+                    ErrorMessage="@mfaSetupError"
+                    ShowQrCode="true"
+                    QrCodeBase64="@mfaQrCode"
+                    SecretKey="@mfaSecretKey"
+                    PromptMessage="Scannez le QR code puis entrez un code pour confirmer"
+                    ShowCancelButton="true"
+                    OnMfaCodeSubmit="HandleMfaEnableVerify"
+                    OnCancel="CloseMfaSetupModal" />
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ✅ Modale Disable MFA (Demande code actuel) -->
+@if (showMfaDisableModal)
+{
+    <div class="modal-overlay" @onclick="CloseMfaDisableModal">
+        <div class="modal-content" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3>Désactiver l'authentification à deux facteurs</h3>
+                <button class="btn-close" @onclick="CloseMfaDisableModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    ⚠️ Attention : Désactiver MFA réduira la sécurité de votre compte.
+                </div>
+                <MfaVerification 
+                    IsLoading="@isMfaDisableLoading"
+                    ErrorMessage="@mfaDisableError"
+                    ShowQrCode="false"
+                    PromptMessage="Pour désactiver MFA, entrez votre code actuel"
+                    ShowCancelButton="true"
+                    OnMfaCodeSubmit="HandleMfaDisableVerify"
+                    OnCancel="CloseMfaDisableModal" />
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    /* ... Gardez tous vos styles existants ... */
+    
+    /* ✅ Ajoutez ces nouveaux styles pour MFA */
+    .mfa-section {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .mfa-section h4 {
+        margin: 0 0 1rem 0;
+        color: #333;
+        font-size: 1.1rem;
+    }
+
+    .form-check {
+        padding: 1rem;
+        background: white;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-check-input {
+        width: 1.2rem;
+        height: 1.2rem;
+        margin-right: 0.5rem;
+        cursor: pointer;
+    }
+
+    .form-check-label {
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .mfa-status {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .status-active {
+        color: #28a745;
+    }
+
+    .status-inactive {
+        color: #ffc107;
+    }
+
+    /* Styles Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @@eyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 1.2rem;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        line-height: 1;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .btn-close:hover {
+        background: #f0f0f0;
+        color: #333;
+    }
+
+    .modal-body {
+        padding: 0;
+        margin-left:10px;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1rem 1.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .modal-content {
+            width: 95%;
+        }
+    }
+</style>
+
+@code {
+    private UserFormModel? model;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // ✅ MFA state
+    private bool currentMfaEnabled = false;
+    private int currentUserId;
+    
+    // ✅ MFA Setup Modal (Enable)
+    private bool showMfaSetupModal = false;
+    private bool isMfaSetupLoading = false;
+    private string? mfaSetupError;
+    private string? mfaQrCode;
+    private string? mfaSecretKey;
+    
+    // ✅ MFA Disable Modal
+    private bool showMfaDisableModal = false;
+    private bool isMfaDisableLoading = false;
+    private string? mfaDisableError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var currentUser = await UserService.GetCurrentUser();
+
+            if (currentUser != null)
+            {
+                currentUserId = currentUser.Id;
+                currentMfaEnabled = (bool)currentUser.MfaEnabled;
+                
+                model = new UserFormModel
+                {
+                    Id = currentUser.Id,
+                    FirstName = currentUser.FirstName ?? "",
+                    LastName = currentUser.LastName ?? "",
+                    Email = currentUser.Email,
+                    MfaEnabled = (bool)currentUser.MfaEnabled
+                };
+            }
+            else
+            {
+                errorMessage = "Impossible de charger votre profil";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // ✅ Handler pour mise à jour profil classique (FirstName, LastName, Email)
+    // ⚠️ NE TOUCHE PAS au MFA !
+    private async Task HandleUpdateProfile(UserFormModel updatedModel)
+    {
+        if (updatedModel == null) return;
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var request = new UpdateUserRequest
+            {
+                Id = updatedModel.Id,
+                FirstName = updatedModel.FirstName,
+                LastName = updatedModel.LastName,
+                Email = updatedModel.Email,
+                Active = updatedModel.Active
+                // ⚠️ NE PAS envoyer MfaEnabled ici !
+            };
+
+            var result = await UserService.UpdateUser(request);
+
+            if (result.Success)
+            {
+                successMessage = "Profil mis à jour avec succès !";
+                await Task.Delay(1500);
+                successMessage = null;
+                await LoadProfile();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Erreur lors de la mise à jour";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    // ✅ Handler séparé pour le toggle MFA
+    private async Task HandleMfaToggle(ChangeEventArgs e)
+    {
+        bool newValue = (bool)e.Value!;
+
+        if (newValue && !currentMfaEnabled)
+        {
+            // Enable MFA → Ouvre modale avec QR code
+            await InitiateMfaSetup();
+        }
+        else if (!newValue && currentMfaEnabled)
+        {
+            // Disable MFA → Ouvre modale pour demander code
+            InitiateMfaDisable();
+        }
+    }
+
+    // ========== MFA ENABLE WORKFLOW ==========
+    
+    private async Task InitiateMfaSetup()
+    {
+        isMfaSetupLoading = true;
+        mfaSetupError = null;
+
+        try
+        {
+            var result = await MfaService.SetupMfa(currentUserId);
+
+            if (result.Success && result.Data != null)
+            {
+                mfaQrCode = result.Data.QrCodeBase64;
+                mfaSecretKey = result.Data.SecretKey;
+            Console.WriteLine($"?? QR Code length: {mfaQrCode?.Length}");
+            Console.WriteLine($"?? Secret Key: {mfaSecretKey}");
+            Console.WriteLine("?? Opening modal...");
+            
+                showMfaSetupModal = true;
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Erreur lors de l'initialisation MFA";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isMfaSetupLoading = false;
+        }
+    }
+
+    private async Task HandleMfaEnableVerify(string code)
+    {
+        isMfaSetupLoading = true;
+        mfaSetupError = null;
+
+        try
+        {
+            var result = await MfaService.EnableMfa(currentUserId, code);
+
+            if (result.Success)
+            {
+                currentMfaEnabled = true;
+                successMessage = "🎉 MFA activé avec succès !";
+                CloseMfaSetupModal();
+                await Task.Delay(1500);
+                successMessage = null;
+                await LoadProfile();
+            }
+            else
+            {
+                mfaSetupError = result.ErrorMessage ?? "Code invalide";
+            }
+        }
+        catch (Exception ex)
+        {
+            mfaSetupError = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isMfaSetupLoading = false;
+        }
+    }
+
+    private void CloseMfaSetupModal()
+    {
+        showMfaSetupModal = false;
+        mfaSetupError = null;
+        mfaQrCode = null;
+        mfaSecretKey = null;
+    }
+
+    // ========== MFA DISABLE WORKFLOW ==========
+    
+    private void InitiateMfaDisable()
+    {
+        showMfaDisableModal = true;
+        mfaDisableError = null;
+    }
+
+    private async Task HandleMfaDisableVerify(string code)
+    {
+        isMfaDisableLoading = true;
+        mfaDisableError = null;
+
+        try
+        {
+            var result = await MfaService.DisableMfa(currentUserId, code);
+
+            if (result.Success)
+            {
+                currentMfaEnabled = false;
+                successMessage = "MFA désactivé avec succès";
+                CloseMfaDisableModal();
+                await Task.Delay(1500);
+                successMessage = null;
+                await LoadProfile();
+            }
+            else
+            {
+                mfaDisableError = result.ErrorMessage ?? "Code invalide";
+            }
+        }
+        catch (Exception ex)
+        {
+            mfaDisableError = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isMfaDisableLoading = false;
+        }
+    }
+
+    private void CloseMfaDisableModal()
+    {
+        showMfaDisableModal = false;
+        mfaDisableError = null;
+    }
+
+    // ========== NAVIGATION ==========
+    
+    private void NavigateToChangePassword()
+    {
+        Navigation.NavigateTo("/change-password");
+    }
+}

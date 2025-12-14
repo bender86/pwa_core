@@ -129,21 +129,6 @@
                     </label>
                 </div>
             }
-
-            <!-- ✅ Toggle MFA toujours visible en mode Edit -->
-            <div class="form-check">
-                <InputCheckbox @bind-Value="model.MfaEnabled" 
-                               class="form-check-input" 
-                               id="mfaEnabled"
-                               disabled="@IsLoading" />
-                <label class="form-check-label" for="mfaEnabled">
-                    🔐 Authentification à deux facteurs (MFA)
-                </label>
-            </div>
-
-            <div class="alert alert-info mt-3">
-                <small>Pour changer votre mot de passe, utilisez la page dédiée.</small>
-            </div>
         }
 
         <button type="submit" class="btn btn-primary btn-block mt-3" disabled="@IsLoading">

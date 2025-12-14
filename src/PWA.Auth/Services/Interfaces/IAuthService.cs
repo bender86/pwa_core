@@ -10,7 +10,7 @@ namespace PWA.Auth.Services;
 public interface IAuthService
 {
     Task<ApiResponse<AuthenticateResponse>> LoginAsync(string email, string password);
-    Task<ApiResponse<MfaVerifyResponse>> VerifyMfaAsync(string sessionId, string code);
+    Task<ApiResponse<AuthenticateResponse>> VerifyMfaAsync(string sessionId, string code);
     Task<ApiResponse<MfaSetupResponse>> EnableMfaAsync(int userId);
     Task<ApiResponse<object>> ConfirmMfaSetupAsync(int userId, string code);
     Task<ApiResponse<object>> DisableMfaAsync(int userId, string mfaCode);
@@ -21,5 +21,7 @@ public interface IAuthService
     Task RemoveTokenAsync();
      // User info
     Task<AuthenticateResponse?> GetCurrentUserAsync();
+    // Task<List<string>> GetUserApplicationsAsync();
+    Task<List<ApplicationDetailsResponse>> GetUserApplicationDetailsAsync();
     Task<bool> IsAuthenticatedAsync();
 }

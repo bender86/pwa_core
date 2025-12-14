@@ -1,7 +1,281 @@
 ﻿@page "/"
+@attribute [Authorize]
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@using dto.auth.Models
+@using dto.common.Models
 
-<PageTitle>Home</PageTitle>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h2>Welcome back@(!string.IsNullOrEmpty(userName) ? $", {userName}" : "")!</h2>
+        <p>Select an application to get started</p>
+    </div>
 
-<h1>Hello, world!</h1>
+    @if (isLoading)
+    {
+        <div class="loading">
+            <div class="spinner-border text-primary"></div>
+            <p>Loading your applications...</p>
+        </div>
+    }
+    else if (availableApps.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            You don't have access to any applications yet. Contact your administrator.
+        </div>
+    }
+    else
+    {
+        <div class="app-tiles">
+            @foreach (var app in availableApps)
+            {
+                <div class="app-tile" @onclick="() => NavigateToApp(app)">
+                    <div class="app-icon">
+                        @if (!string.IsNullOrEmpty(app.IconUrl))
+                        {
+                            <img src="@app.IconUrl" alt="@app.DisplayName" />
+                        }
+                        else
+                        {
+                            <i class="bi bi-app"></i>
+                        }
+                    </div>
+                    <h3>@app.DisplayName</h3>
+                    <div class="app-arrow">
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
 
-Welcome to your new app.
+@code {
+    private bool isLoading = true;
+    private List<ApplicationDetailsResponse> availableApps = new();
+    private string userName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserInfo();
+        await LoadApplications();
+    }
+
+    private async Task LoadUserInfo()
+    {
+        try
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                userName = string.IsNullOrEmpty(user.FullName) ? user.Email : user.FullName;
+                Console.WriteLine($"👤 User: {userName}");
+                Console.WriteLine($"🔐 Roles: {string.Join(", ", user.Roles)}");
+                Console.WriteLine($"📱 Apps: {string.Join(", ", user.Applications)}");
+            }
+            else
+            {
+                Console.WriteLine("❌ User is NULL!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading user info: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
+        }
+    }
+
+    private async Task LoadApplications()
+    {
+        isLoading = true;
+
+        try
+        {
+            // ✅ Récupère directement les détails complets depuis localStorage
+            availableApps = await AuthService.GetUserApplicationDetailsAsync();
+            
+            Console.WriteLine($"📱 Loaded {availableApps.Count} applications");
+            
+            foreach (var app in availableApps)
+            {
+                Console.WriteLine($"  ✅ {app.DisplayName} - {app.AppUrl}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading applications: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NavigateToApp(ApplicationDetailsResponse app)
+    {
+        Console.WriteLine($"🚀 Navigating to {app.DisplayName} ({app.AppUrl})");
+        
+        if (!string.IsNullOrEmpty(app.AppUrl))
+        {
+            if (app.AppUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                // Navigation externe
+                Navigation.NavigateTo(app.AppUrl, forceLoad: true);
+            }
+            else
+            {
+                // Navigation interne
+                Navigation.NavigateTo(app.AppUrl);
+            }
+        }
+    }
+}
+
+<style>
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .dashboard-header {
+        margin-bottom: 3rem;
+        text-align: center;
+    }
+
+    .dashboard-header h2 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #212529;
+    }
+
+    .dashboard-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 4rem 0;
+    }
+
+    .loading .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .loading p {
+        color: #6c757d;
+        font-size: 1rem;
+    }
+
+    .alert {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .alert i {
+        font-size: 1.5rem;
+    }
+
+    .app-tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .app-tile {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .app-tile:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-color: #007bff;
+    }
+
+    .app-icon {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .app-icon img {
+        max-width: 48px;
+        max-height: 48px;
+    }
+
+    .app-icon i {
+        font-size: 2rem;
+        color: #007bff;
+    }
+
+    .app-tile h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #212529;
+    }
+
+    .app-tile p {
+        color: #6c757d;
+        margin-bottom: 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .app-arrow {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .app-tile:hover .app-arrow {
+        opacity: 1;
+        transform: translateX(4px);
+    }
+
+    .app-arrow i {
+        font-size: 1.5rem;
+        color: #007bff;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .dashboard-container {
+            padding: 1rem;
+        }
+
+        .dashboard-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .app-tiles {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+    }
+</style>

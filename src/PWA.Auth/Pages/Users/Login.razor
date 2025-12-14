@@ -1,4 +1,5 @@
 @page "/login"
+@page "/user/login"
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -37,6 +38,7 @@
                 ShowQrCode="@showQrCode"
                 QrCodeBase64="@qrCodeBase64"
                 SecretKey="@secretKey"
+                PromptMessage="Entrez le code de votre application d'authentification"
                 OnMfaCodeSubmit="HandleMfaVerify"
                 OnCancel="HandleCancelMfa" />
         }
@@ -240,15 +242,24 @@
         {
             var result = await AuthService.VerifyMfaAsync(mfaSessionId, code);
 
-            if (result.Success && result.Data?.Success == true)
+            if (result.Success && result.Data != null)
+        {
+            // ? Token pr�sent = MFA v�rifi� avec succ�s
+            if (!string.IsNullOrEmpty(result.Data.Token))
             {
-                // MFA vérifié avec succès - rediriger
+                Console.WriteLine($"? MFA verified for {result.Data.FullName}");
                 await CompleteAuthentication();
             }
             else
             {
-                errorMessage = result.Data?.Message ?? "Code MFA invalide";
+                errorMessage = "Erreur lors de la g�n�ration du token";
             }
+        }
+        else
+        {
+            // ? Utilise result.Message (de ApiResponse) au lieu de result.Data.ErrorMessage
+            errorMessage = result.ErrorMessage ?? "Code MFA invalide";
+        }
         }
         catch (Exception ex)
         {

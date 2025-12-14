@@ -55,6 +55,7 @@ public class AuthService : IAuthService
             
             if (apiResponse?.Success == true && apiResponse.Data != null)
             {
+                Console.WriteLine($"==> apiResponse.Data: {apiResponse.Data}");
                 // If MFA is not required, store the token
                 if (!apiResponse.Data.RequiresMfa && !string.IsNullOrEmpty(apiResponse.Data.Token))
                 {
@@ -75,7 +76,7 @@ public class AuthService : IAuthService
     /// Verify MFA code after login
     /// Endpoint: POST /user/verify-mfa
     /// </summary>
-    public async Task<ApiResponse<MfaVerifyResponse>> VerifyMfaAsync(string sessionId, string code)
+    public async Task<ApiResponse<AuthenticateResponse>> VerifyMfaAsync(string sessionId, string code)
     {
         try
         {
@@ -89,35 +90,29 @@ public class AuthService : IAuthService
             
             if (!response.IsSuccessStatusCode)
             {
-                return ApiResponse<MfaVerifyResponse>.ErrorResponse(
+                return ApiResponse<AuthenticateResponse>.ErrorResponse(
                     $"MFA verification error: {response.StatusCode}", 
                     (int)response.StatusCode
                 );
             }
 
-            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<MfaVerifyResponse>>();
+            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<AuthenticateResponse>>();
             
-            if (apiResponse?.Success == true && apiResponse.Data?.Success == true)
+            if (apiResponse?.Success == true && apiResponse.Data != null)
             {
-                // Store token after successful MFA verification
-                if (!string.IsNullOrEmpty(apiResponse.Data.Token))
+                Console.WriteLine($"==> apiResponse.Data: {apiResponse.Data}");
+                // If MFA is not required, store the token
+                if (!apiResponse.Data.RequiresMfa && !string.IsNullOrEmpty(apiResponse.Data.Token))
                 {
-                    var authData = new AuthenticateResponse
-                    {
-                        Token = apiResponse.Data.Token,
-                        Id = apiResponse.Data.UserId ?? 0,
-                        Email = apiResponse.Data.Username ?? string.Empty,
-                        MfaEnabled = apiResponse.Data.MfaEnabled 
-                    };
-                    await StoreAuthDataAsync(apiResponse.Data.Token, authData);
+                    await StoreAuthDataAsync(apiResponse.Data.Token, apiResponse.Data);
                 }
             }
 
-            return apiResponse ?? ApiResponse<MfaVerifyResponse>.ErrorResponse("Invalid response");
+            return apiResponse ?? ApiResponse<AuthenticateResponse>.ErrorResponse("Invalid response");
         }
         catch (Exception ex)
         {
-            return ApiResponse<MfaVerifyResponse>.ErrorResponse($"Error: {ex.Message}");
+            return ApiResponse<AuthenticateResponse>.ErrorResponse($"Error: {ex.Message}");
         }
     }
 
@@ -261,14 +256,14 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<string?> GetTokenAsync()
     {
-        return await _localStorage.GetItemAsync<string>(TokenKey);
+        return await _localStorage.GetItemAsStringAsync(TokenKey);
     }
     /// <summary>
     /// Stocker le token JWT
     /// </summary>
     public async Task StoreTokenAsync(string token)
     {
-        await _localStorage.SetItemAsync(TokenKey, token);
+        await _localStorage.SetItemAsStringAsync(TokenKey, token);
     }
 
     /// <summary>
@@ -297,11 +292,80 @@ public class AuthService : IAuthService
     }
 
     /// <summary>
+    /// Get the list of roles for the current user
+    /// </summary>
+    public async Task<List<string>> GetUserRolesAsync()
+    {
+        try
+        {
+            var authData = await _localStorage.GetItemAsync<AuthenticateResponse>("authData");
+            return authData?.Roles ?? new List<string>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting user roles: {ex.Message}");
+            return new List<string>();
+        }
+    }
+    /// <summary>
+    /// Get the list of applications the user has access to
+    /// </summary>
+    public async Task<List<ApplicationDetailsResponse>> GetUserApplicationDetailsAsync()
+    {
+        try
+        {
+            var authData = await _localStorage.GetItemAsync<AuthenticateResponse>(UserKey);
+            return authData?.ApplicationsDetails ?? new List<ApplicationDetailsResponse>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting user applications: {ex.Message}");
+            return new List<ApplicationDetailsResponse>();
+        }
+    }
+
+    /// <summary>
+    /// Check if the current user has a specific role
+    /// </summary>
+    /// <param name="roleName">Role name to check (case-insensitive)</param>
+    public async Task<bool> HasRoleAsync(string roleName)
+    {
+        var roles = await GetUserRolesAsync();
+        return roles.Any(r => r.Equals(roleName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Check if the current user has access to a specific application
+    /// </summary>
+    /// <param name="appName">Application name to check (case-insensitive)</param>
+    public async Task<bool> HasApplicationAccessAsync(string appName)
+    {
+        var apps = await GetUserApplicationDetailsAsync();
+        return apps.Any(a => a.Name.Equals(appName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Check if the current user is an admin
+    /// </summary>
+    public async Task<bool> IsAdminAsync()
+    {
+        try
+        {
+            var authData = await _localStorage.GetItemAsync<AuthenticateResponse>("authData");
+            return authData?.Admin == true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Store authentication data
     /// </summary>
     private async Task StoreAuthDataAsync(string token, AuthenticateResponse user)
     {
-        await _localStorage.SetItemAsync(TokenKey, token);
+        await _localStorage.SetItemAsStringAsync(TokenKey, token);
         await _localStorage.SetItemAsync(UserKey, user);
     }
 }

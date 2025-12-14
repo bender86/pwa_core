@@ -10,15 +10,17 @@ namespace PWA.Auth.Services
         private readonly HttpClient _httpClient;
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly ILogger<UserService> _logger;
+        private readonly IAuthService _authService;
 
         public UserService(
             HttpClient httpClient,
             AuthenticationStateProvider authStateProvider,
-            ILogger<UserService> logger)
+            ILogger<UserService> logger, IAuthService authService)
         {
             _httpClient = httpClient;
             _authStateProvider = authStateProvider;
             _logger = logger;
+            _authService = authService;
         }
 
         public async Task<ApiResponse<UserResponse>> CreateUser(CreateUserRequest request)
@@ -163,28 +165,49 @@ namespace PWA.Auth.Services
         {
             try
             {
-                var authState = await _authStateProvider.GetAuthenticationStateAsync();
-                var user = authState.User;
-
-                if (!user.Identity?.IsAuthenticated ?? true)
+                _logger.LogInformation("?? D�but GetCurrentUser");
+                
+                // ? Utiliser directement la m�thode existante de AuthService
+                var currentUser = await _authService.GetCurrentUserAsync();
+                
+                if (currentUser == null)
                 {
+                    _logger.LogWarning("? GetCurrentUserAsync returned null");
                     return null;
                 }
 
-                // Récupérer l'ID de l'utilisateur depuis les claims
-                var userIdClaim = user.FindFirst("UserId")?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    _logger.LogWarning("UserId claim non trouvé ou invalide");
-                    return null;
-                }
+                _logger.LogInformation($"? User from AuthService: {currentUser.Email}, ID: {currentUser.Id}");
 
-                var result = await GetUserById(userId);
-                return result.Success ? result.Data : null;
+                // R�cup�rer les d�tails complets depuis l'API
+                var result = await GetUserById(currentUser.Id);
+                
+                if (result.Success && result.Data != null)
+                {
+                    _logger.LogInformation($"? UserDetail r�cup�r�: {result.Data.Email}");
+                    return result.Data;
+                }
+                else
+                {
+                    _logger.LogWarning($"? Erreur GetUserById: {result.ErrorMessage}");
+                    
+                    // Fallback : cr�er un UserDetailResponse basique depuis currentUser
+                    return new UserDetailResponse
+                    {
+                        Id = currentUser.Id,
+                        Email = currentUser.Email,
+                        // FirstName = currentUser.FirstName,
+                        // LastName = currentUser.LastName,
+                        IsAdmin = currentUser.Admin ?? false,
+                        Active = true,
+                        MfaEnabled = currentUser.MfaEnabled ?? false,
+                        Status = dto.user.Enums.UserStatus.Active,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de la récupération de l'utilisateur actuel");
+                _logger.LogError(ex, "? Erreur lors de la r�cup�ration de l'utilisateur actuel");
                 return null;
             }
         }

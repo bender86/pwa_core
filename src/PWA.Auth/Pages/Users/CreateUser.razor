@@ -1,13 +1,14 @@
 @page "/admin/users/create"
 @using PWA.Auth.Models
 @using dto.user.Models
+@using dto.common.Enums
 @attribute [Authorize(Roles = "Admin")]
 @inject IUserService UserService
 @inject NavigationManager Navigation
 
 <h2>Créer un utilisateur</h2>
 
-<UserForm Mode="UserFormMode.Create"
+<UserForm Mode="FormMode.Create"
           OnSubmit="HandleCreate"
           IsLoading="isLoading"
           ErrorMessage="@errorMessage"
