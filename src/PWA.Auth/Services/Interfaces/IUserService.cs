@@ -1,5 +1,6 @@
 using dto.user.Models;
 using dto.common.Models;
+using dto.user.Enums;
 
 namespace PWA.Auth.Services
 {
@@ -23,7 +24,7 @@ namespace PWA.Auth.Services
         /// <summary>
         /// Obtenir tous les utilisateurs (Admin uniquement)
         /// </summary>
-        Task<ApiResponse<List<UserResponse>>> GetAllUsers();
+        Task<ApiResponse<List<UserDetailResponse>>> GetAllUsers();
 
         /// <summary>
         /// Changer le mot de passe
@@ -34,5 +35,14 @@ namespace PWA.Auth.Services
         /// Obtenir l'utilisateur connect�
         /// </summary>
         Task<UserDetailResponse?> GetCurrentUser();
+        Task<ApiResponse<UserDetailResponse>> UpdateUserStatus(int userId, UserStatus newStatus);
+        
+        /// <summary>
+        /// Supprimer un utilisateur
+        /// </summary>
+        Task<ApiResponse<bool>> DeleteUser(int userId);
+        Task<ApiResponse<UserInvitationResponse>> CreateUserInvitation(CreateUserInvitationRequest request);
+        Task<ApiResponse<UserDetailResponse>> CompleteUserRegistration(CompleteUserRegistrationRequest request);
+
     }
 }

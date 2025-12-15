@@ -1,0 +1,302 @@
+@* Pages/Admin/ManageUsers.razor *@
+@page "/admin/manageusers"
+@attribute [Authorize(Roles = "Admin")]
+@using dto.user.Models
+@using dto.user.Enums
+
+<PageTitle>Manage Users - MaesAuth</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <h1 class="mb-0">User Management</h1>
+        </div>
+        <button class="btn btn-primary" @onclick="CreateNewUser">
+            <i class="bi bi-plus-lg"></i> New User
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading users...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+    else if (users == null || !users.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-people" style="font-size: 4rem; color: #6c757d;"></i>
+            <h3 class="mt-3">No users found</h3>
+            <p class="text-muted">Create your first user to get started</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>MFA</th>
+                                <th>Created</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in users)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@user.Id</td>
+                                    <td>@user.Email</td>
+                                    <td>@user.FirstName</td>
+                                    <td>@user.LastName</td>
+                                    <td>
+                                        @if (user.Roles != null && user.Roles.Any())
+                                        {
+                                            @foreach (var role in user.Roles)
+                                            {
+                                                <span class="badge bg-primary me-1">@role</span>
+                                            }
+                                        }
+                                        else if ((bool)user.IsAdmin)
+                                        {
+                                            <span class="badge bg-warning text-dark">Admin</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">User</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @switch (user.Status)
+                                        {
+                                            case UserStatus.Pending:
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                break;
+                                            case UserStatus.Active:
+                                                <span class="badge bg-success">Active</span>
+                                                break;
+                                            case UserStatus.Rejected:
+                                                <span class="badge bg-danger">Rejected</span>
+                                                break;
+                                            case UserStatus.Suspended:
+                                                <span class="badge bg-secondary">Suspended</span>
+                                                break;
+                                            case UserStatus.Inactive:
+                                                <span class="badge bg-light text-dark">Inactive</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if ((bool)user.MfaEnabled)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-shield-check"></i> Enabled
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Disabled</span>
+                                        }
+                                    </td>
+                                    <td class="text-muted">
+                                        @user.CreatedAt.ToString("yyyy-MM-dd")
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm float-end" role="group">
+                                            @if (user.Status == UserStatus.Pending)
+                                            {
+                                                <button class="btn btn-success" @onclick="() => ApproveUser(user.Id)" title="Approve">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                                <button class="btn btn-warning" @onclick="() => RejectUser(user.Id)" title="Reject">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            }
+                                            <button class="btn btn-outline-primary" @onclick="() => EditUser(user.Id)" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            @if (user.Status != UserStatus.Suspended)
+                                            {
+                                                <button class="btn btn-outline-warning" @onclick="() => SuspendUser(user.Id)" title="Suspend">
+                                                    <i class="bi bi-pause-circle"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-success" @onclick="() => ReactivateUser(user.Id)" title="Reactivate">
+                                                    <i class="bi bi-play-circle"></i>
+                                                </button>
+                                            }
+                                            <button class="btn btn-outline-danger" @onclick="() => DeleteUser(user.Id)" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                Total: @users.Count user(s)
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] private IUserService UserService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private List<UserDetailResponse>? users;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await UserService.GetAllUsers();
+            
+            if (response.Success && response.Data != null)
+            {
+                users = response.Data.ToList();
+            }
+            else
+            {
+                errorMessage = response.ErrorMessage ?? "Failed to load users";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading users: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin");
+    }
+
+    private void CreateNewUser()
+    {
+        Navigation.NavigateTo("/admin/users/new");
+    }
+
+    private void EditUser(int userId)
+    {
+        Navigation.NavigateTo($"/admin/users/edit/{userId}");
+    }
+
+    private async Task ApproveUser(int userId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Approve this user and activate their account?"))
+        {
+            await ChangeUserStatus(userId, UserStatus.Active);
+        }
+    }
+
+    private async Task RejectUser(int userId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Reject this user registration?"))
+        {
+            await ChangeUserStatus(userId, UserStatus.Rejected);
+        }
+    }
+
+    private async Task SuspendUser(int userId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Suspend this user account?"))
+        {
+            await ChangeUserStatus(userId, UserStatus.Suspended);
+        }
+    }
+
+    private async Task ReactivateUser(int userId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Reactivate this user account?"))
+        {
+            await ChangeUserStatus(userId, UserStatus.Active);
+        }
+    }
+
+    private async Task ChangeUserStatus(int userId, UserStatus newStatus)
+    {
+        try
+        {
+            var response = await UserService.UpdateUserStatus(userId, newStatus);
+            
+            if (response.Success)
+            {
+                await LoadUsers();
+            }
+            else
+            {
+                errorMessage = response.ErrorMessage ?? "Failed to update user status";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteUser(int userId)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to permanently delete this user?"))
+        {
+            try
+            {
+                var response = await UserService.DeleteUser(userId);
+                
+                if (response.Success)
+                {
+                    await LoadUsers();
+                }
+                else
+                {
+                    errorMessage = response.ErrorMessage ?? "Failed to delete user";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error: {ex.Message}";
+            }
+        }
+    }
+}
