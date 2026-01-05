@@ -322,5 +322,67 @@ namespace PWA.Auth.Services
                 return ApiResponse<UserDetailResponse>.ErrorResponse($"Erreur: {ex.Message}", 500);
             }
         }
+
+        public async Task<ApiResponse<object>> RequestPasswordReset(string email)
+        {
+            try
+            {
+                var request = new RequestPasswordResetRequest { Email = email };
+                
+                var response = await _httpClient.PostAsJsonAsync(
+                    "user/request-password-reset", 
+                    request
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                    return result ?? ApiResponse<object>.ErrorResponse("Invalid response", 500);
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to request password reset: {Error}", errorContent);
+                
+                return ApiResponse<object>.ErrorResponse(
+                    "Failed to send reset link", 
+                    (int)response.StatusCode
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error requesting password reset");
+                return ApiResponse<object>.ErrorResponse($"Error: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ApiResponse<object>> ResetPassword(ResetPasswordRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(
+                    "user/reset-password", 
+                    request
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
+                    return result ?? ApiResponse<object>.ErrorResponse("Invalid response", 500);
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to reset password: {Error}", errorContent);
+                
+                return ApiResponse<object>.ErrorResponse(
+                    "Failed to reset password", 
+                    (int)response.StatusCode
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password");
+                return ApiResponse<object>.ErrorResponse($"Error: {ex.Message}", 500);
+            }
+        }
     }
 }

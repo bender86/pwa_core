@@ -26,9 +26,16 @@
             <InputText type="password" 
                        @bind-Value="model.Password" 
                        class="form-control" 
-                       placeholder="��������" 
+                       placeholder="********" 
                        disabled="@IsLoading" />
             <ValidationMessage For="@(() => model.Password)" />
+        </div>
+
+        <!-- ? Lien Forgot Password -->
+        <div class="text-end mb-3">
+            <a href="/forgot-password" class="forgot-password-link">
+                Forgot your password?
+            </a>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block" disabled="@IsLoading">
@@ -44,6 +51,20 @@
         </button>
     </EditForm>
 </div>
+
+<style>
+    .forgot-password-link {
+        font-size: 0.875rem;
+        color: #667eea;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .forgot-password-link:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+</style>
 
 @code {
     [Parameter] public bool IsLoading { get; set; }

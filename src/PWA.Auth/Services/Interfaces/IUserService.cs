@@ -43,6 +43,9 @@ namespace PWA.Auth.Services
         Task<ApiResponse<bool>> DeleteUser(int userId);
         Task<ApiResponse<UserInvitationResponse>> CreateUserInvitation(CreateUserInvitationRequest request);
         Task<ApiResponse<UserDetailResponse>> CompleteUserRegistration(CompleteUserRegistrationRequest request);
+        //manage password
+        Task<ApiResponse<object>> RequestPasswordReset(string email);
+        Task<ApiResponse<object>> ResetPassword(ResetPasswordRequest request);
 
     }
 }

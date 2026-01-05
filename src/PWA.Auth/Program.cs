@@ -13,7 +13,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configuration de l'API
-var apiBaseUrl =  builder.Configuration["ApiBaseUrl"]??"https://maeshome.ddns.net/api/v1/" ;// "http://localhost:5035/api/v1/";
+var apiBaseUrl =  "http://localhost:5035/api/v1/";//builder.Configuration["ApiBaseUrl"]??"https://maeshome.ddns.net/api/v1/" ;// 
 
 // ? Configurer les options JSON globalement pour Blazor
 builder.Services.Configure<JsonSerializerOptions>(options =>
