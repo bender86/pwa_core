@@ -1,0 +1,80 @@
+﻿@page "/worldbet"
+@layout WorldBetLayout;
+@using PWA.Auth.Services;
+@inject ITournamentService TournamentService
+
+<PageTitle>WorldBet - Accueil</PageTitle>
+
+<h1>Bienvenue sur WorldBet</h1>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Prochains matches</h5>
+                @if (upcomingMatches == null)
+                {
+                    <p><em>Chargement...</em></p>
+                }
+                else if (!upcomingMatches.Any())
+                {
+                    <p>Aucun match à venir</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var match in upcomingMatches.Take(5))
+                        {
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>@match.Team1Name vs @match.Team2Name</span>
+                                    <small class="text-muted">@match.ScheduledDate.ToString("dd/MM HH:mm")</small>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Derniers résultats</h5>
+                @if (recentMatches == null)
+                {
+                    <p><em>Chargement...</em></p>
+                }
+                else if (!recentMatches.Any())
+                {
+                    <p>Aucun résultat disponible</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var match in recentMatches.Take(5))
+                        {
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>@match.Team1Name @match.ScoreTeam1 - @match.ScoreTeam2 @match.Team2Name</span>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<dto.worldbet.Models.MatchDto>? upcomingMatches;
+    private List<dto.worldbet.Models.MatchDto>? recentMatches;
+
+    protected override async Task OnInitializedAsync()
+    {
+        upcomingMatches = await TournamentService.GetUpcomingMatchesAsync(5);
+        recentMatches = await TournamentService.GetRecentMatchesAsync(5);
+    }
+}

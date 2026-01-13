@@ -1,0 +1,223 @@
+<div class="worldbet-nav-container">
+    <!-- Menu burger pour mobile -->
+    <button class="menu-toggle d-md-none" @onclick="ToggleMenu">
+        <i class="bi bi-@(showMobileMenu ? "x-lg" : "list")"></i>
+    </button>
+    
+    <!-- Navigation -->
+    <nav class="worldbet-nav @(showMobileMenu ? "show" : "")">
+        <NavLink href="/worldbet" Match="NavLinkMatch.All" class="nav-item" @onclick="HideMenu">
+            <i class="bi bi-house-fill"></i>
+            <span>Accueil</span>
+        </NavLink>
+        
+        <NavLink href="/worldbet/matches" class="nav-item" @onclick="HideMenu">
+            <i class="bi bi-calendar-event"></i>
+            <span>Matches</span>
+        </NavLink>
+        
+        <NavLink href="/worldbet/groups" class="nav-item" @onclick="HideMenu">
+            <i class="bi bi-grid-3x3"></i>
+            <span>Poules</span>
+        </NavLink>
+        
+        <NavLink href="/worldbet/leaderboard" class="nav-item" @onclick="HideMenu">
+            <i class="bi bi-trophy-fill"></i>
+            <span>Classement</span>
+        </NavLink>
+        
+        <NavLink href="/worldbet/my-pronostics" class="nav-item" @onclick="HideMenu">
+            <i class="bi bi-pencil-square"></i>
+            <span>Mes Pronostics</span>
+        </NavLink>
+        
+        <AuthorizeView Roles="Admin,SuperAdmin">
+            <Authorized>
+                <NavLink href="/worldbet/admin" class="nav-item admin" @onclick="HideMenu">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Admin</span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+    
+    <!-- Overlay pour mobile -->
+    @if (showMobileMenu)
+    {
+        <div class="nav-overlay" @onclick="HideMenu"></div>
+    }
+</div>
+
+@code {
+    private bool showMobileMenu = false;
+    
+    private void ToggleMenu()
+    {
+        showMobileMenu = !showMobileMenu;
+    }
+    
+    private void HideMenu()
+    {
+        showMobileMenu = false;
+    }
+}
+
+<style>
+    .worldbet-nav-container {
+        position: relative;
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    /* Bouton burger mobile */
+    .menu-toggle {
+        width: 100%;
+        padding: 1rem;
+        background: #f8f9fa;
+        border: none;
+        font-size: 1.5rem;
+        color: #495057;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .menu-toggle:hover {
+        background: #e9ecef;
+    }
+    
+    /* Navigation */
+    .worldbet-nav {
+        display: flex;
+        gap: 0.5rem;
+        padding: 1rem;
+        transition: all 0.3s;
+    }
+    
+    /* Mode mobile */
+    @@media (max-width: 767px) {
+        .worldbet-nav {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            flex-direction: column;
+            padding: 5rem 1rem 1rem;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .worldbet-nav.show {
+            left: 0;
+        }
+        
+        .nav-item {
+            flex-direction: row;
+            justify-content: flex-start;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            width: 100%;
+        }
+        
+        .nav-item i {
+            font-size: 1.5rem;
+        }
+        
+        .nav-item span {
+            font-size: 1rem;
+        }
+    }
+    
+    /* Mode desktop */
+    @@media (min-width: 768px) {
+        .worldbet-nav {
+            justify-content: center;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .worldbet-nav::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        .worldbet-nav::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 4px;
+        }
+    }
+    
+    /* Styles communs des items */
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #6c757d;
+        transition: all 0.2s;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+    
+    .nav-item i {
+        font-size: 1.5rem;
+    }
+    
+    .nav-item span {
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .nav-item:hover {
+        background: #e9ecef;
+        color: #495057;
+        transform: translateY(-2px);
+    }
+    
+    .nav-item.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .nav-item.admin {
+        background: #ffc107;
+        color: #000;
+    }
+    
+    .nav-item.admin.active {
+        background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+        color: white;
+    }
+    
+    /* Overlay mobile */
+    .nav-overlay {
+        display: none;
+    }
+    
+    @@media (max-width: 767px) {
+        .nav-overlay {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+    }
+    
+    /* Cache le bouton burger sur desktop */
+    @@media (min-width: 768px) {
+        .menu-toggle {
+            display: none !important;
+        }
+    }
+</style>

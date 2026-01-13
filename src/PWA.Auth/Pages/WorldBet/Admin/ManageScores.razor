@@ -1,0 +1,144 @@
+@page "/worldbet/admin/scores"
+@using PWA.Auth.Pages.WorldBet.Shared
+@using dto.worldbet.Models
+@layout WorldBetLayout
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject ITournamentService TournamentService
+
+<PageTitle>Mettre � Jour les Scores</PageTitle>
+
+<h3>? Mettre � Jour les Scores</h3>
+
+<div class="filters mb-4">
+    <select @bind="selectedPhase" class="form-select" style="max-width: 300px;">
+        <option value="">Toutes les phases</option>
+        <option value="Groups">Phase de Poules</option>
+        <option value="RoundOf16">8�mes de finale</option>
+        <option value="QuarterFinals">Quarts de finale</option>
+        <option value="SemiFinals">Demi-finales</option>
+        <option value="Final">Finale</option>
+    </select>
+</div>
+
+@if (matches == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else
+{
+    <div class="matches-list">
+        @foreach (var match in matches)
+        {
+            <div class="match-card">
+                <div class="match-info">
+                    <span class="match-date">@match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")</span>
+                    @if (!string.IsNullOrEmpty(match.GroupLetter))
+                    {
+                        <span class="badge bg-secondary">Groupe @match.GroupLetter</span>
+                    }
+                </div>
+                
+                <div class="match-teams">
+                    <div class="team">
+                        <span class="team-name">@match.Team1Name</span>
+                        <input type="number" 
+                               class="form-control score-input" 
+                               @bind="match.ScoreTeam1" 
+                               min="0" />
+                    </div>
+                    
+                    <span class="vs">-</span>
+                    
+                    <div class="team">
+                        <input type="number" 
+                               class="form-control score-input" 
+                               @bind="match.ScoreTeam2" 
+                               min="0" />
+                        <span class="team-name">@match.Team2Name</span>
+                    </div>
+                </div>
+                
+                <div class="match-actions">
+                    <button class="btn btn-success" @onclick="() => SaveScore(match)">
+                        Enregistrer
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<MatchDto>? matches;
+    private string selectedPhase = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMatches();
+    }
+    
+    private async Task LoadMatches()
+    {
+        matches = await TournamentService.GetAllMatchesAsync();
+        // Filtrer par status (Live ou Finished pour mettre � jour scores)
+    }
+    
+    private async Task SaveScore(MatchDto match)
+    {
+        // Appeler l'API pour mettre � jour le score
+        // await TournamentService.UpdateMatchScoreAsync(match.MatchId, match.ScoreTeam1, match.ScoreTeam2);
+    }
+}
+
+<style>
+    .match-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .match-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .match-teams {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .team {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .team-name {
+        font-weight: 600;
+        min-width: 150px;
+    }
+    
+    .score-input {
+        width: 80px;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    .vs {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #6c757d;
+    }
+</style>

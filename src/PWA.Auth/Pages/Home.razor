@@ -1,63 +1,89 @@
 ﻿@page "/"
-@attribute [Authorize]
-@inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IAuthService AuthService
 @using dto.auth.Models
 @using dto.common.Models
 
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <h2>Welcome back@(!string.IsNullOrEmpty(userName) ? $", {userName}" : "")!</h2>
-        <p>Select an application to get started</p>
-    </div>
-
-    @if (isLoading)
+    @if (!isAuthenticated)
     {
         <div class="loading">
             <div class="spinner-border text-primary"></div>
-            <p>Loading your applications...</p>
-        </div>
-    }
-    else if (availableApps.Count == 0)
-    {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i>
-            You don't have access to any applications yet. Contact your administrator.
+            <p>Vérification de l'authentification...</p>
         </div>
     }
     else
     {
-        <div class="app-tiles">
-            @foreach (var app in availableApps)
-            {
-                <div class="app-tile" @onclick="() => NavigateToApp(app)">
-                    <div class="app-icon">
-                        @if (!string.IsNullOrEmpty(app.IconUrl))
-                        {
-                            <img src="@app.IconUrl" alt="@app.DisplayName" />
-                        }
-                        else
-                        {
-                            <i class="bi bi-app"></i>
-                        }
-                    </div>
-                    <h3>@app.DisplayName</h3>
-                    <div class="app-arrow">
-                        <i class="bi bi-arrow-right"></i>
-                    </div>
-                </div>
-            }
+        <div class="dashboard-header">
+            <h2>Welcome back@(!string.IsNullOrEmpty(userName) ? $", {userName}" : "")!</h2>
+            <p>Select an application to get started</p>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="loading">
+                <div class="spinner-border text-primary"></div>
+                <p>Loading your applications...</p>
+            </div>
+        }
+        else if (availableApps.Count == 0)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                You don't have access to any applications yet. Contact your administrator.
+            </div>
+        }
+        else
+        {
+            <div class="app-tiles">
+                @foreach (var app in availableApps)
+                {
+                    <div class="app-tile" @onclick="() => NavigateToApp(app)">
+                        <div class="app-icon">
+                            @if (!string.IsNullOrEmpty(app.IconUrl))
+                            {
+                                <img src="@app.IconUrl" alt="@app.DisplayName" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-app"></i>
+                            }
+                        </div>
+                        <h3>@app.DisplayName</h3>
+                        <div class="app-arrow">
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
     }
 </div>
 
 @code {
+    private bool isAuthenticated = false;
     private bool isLoading = true;
     private List<ApplicationDetailsResponse> availableApps = new();
     private string userName = "";
 
     protected override async Task OnInitializedAsync()
     {
+        // Vérifier l'authentification AVANT tout
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            Console.WriteLine("❌ Not authenticated, redirecting to login");
+            Navigation.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        Console.WriteLine("✅ User is authenticated");
+        isAuthenticated = true;
+
+        // Charger les données
         await LoadUserInfo();
         await LoadApplications();
     }
@@ -92,7 +118,6 @@
 
         try
         {
-            // ✅ Récupère directement les détails complets depuis localStorage
             availableApps = await AuthService.GetUserApplicationDetailsAsync();
             
             Console.WriteLine($"📱 Loaded {availableApps.Count} applications");
@@ -121,17 +146,16 @@
         {
             if (app.AppUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                // Navigation externe
                 Navigation.NavigateTo(app.AppUrl, forceLoad: true);
             }
             else
             {
-                // Navigation interne
                 Navigation.NavigateTo(app.AppUrl);
             }
         }
     }
 }
+
 
 <style>
     .dashboard-container {

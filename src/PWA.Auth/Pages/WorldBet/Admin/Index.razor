@@ -1,0 +1,73 @@
+@page "/worldbet/admin"
+@using PWA.Auth.Pages.WorldBet.Shared  
+@layout WorldBetLayout
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+
+<PageTitle>Admin - WorldBet</PageTitle>
+
+<div class="admin-sections">
+    <a href="/worldbet/admin/matches" class="admin-card">
+        <i class="bi bi-calendar-event" style="font-size: 3rem; color: #667eea;"></i>
+        <h4>Gérer les Matches</h4>
+        <p>Créer et modifier les matches</p>
+    </a>
+    
+    <a href="/worldbet/admin/scores" class="admin-card">
+        <i class="bi bi-trophy" style="font-size: 3rem; color: #28a745;"></i>
+        <h4>Mettre à Jour les Scores</h4>
+        <p>Encoder les résultats</p>
+    </a>
+    
+    <a href="/worldbet/admin/teams" class="admin-card">
+        <i class="bi bi-flag" style="font-size: 3rem; color: #dc3545;"></i>
+        <h4>Gérer les équipes</h4>
+        <p>Ajouter/modifier les équipes</p>
+    </a>
+    
+    <a href="/worldbet/admin/phases" class="admin-card">
+        <i class="bi bi-diagram-3" style="font-size: 3rem; color: #ffc107;"></i>
+        <h4>Gérer les Phases</h4>
+        <p>Poules, 8émes, 1/4, etc.</p>
+    </a>
+</div>
+
+<style>
+    .admin-sections {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .admin-card {
+        background: white;
+        border: 2px solid #ffc107;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s;
+    }
+    
+    .admin-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        border-color: #ff9800;
+    }
+    
+    .card-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .admin-card h4 {
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .admin-card p {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+</style>

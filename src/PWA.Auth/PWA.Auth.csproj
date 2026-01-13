@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\..\..\DTO\dto.common\dto.common.csproj" />
     <ProjectReference Include="..\..\..\..\DTO\dto.auth\dto.auth.csproj" />
     <ProjectReference Include="..\..\..\..\DTO\dto.user\dto.user.csproj" />
+    <ProjectReference Include="..\..\..\..\DTO\dto.worldbet\dto.worldbet.csproj" />
   </ItemGroup>
 
 </Project>

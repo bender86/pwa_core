@@ -13,7 +13,8 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configuration de l'API
-var apiBaseUrl =  "http://localhost:5035/api/v1/";//builder.Configuration["ApiBaseUrl"]??"https://maeshome.ddns.net/api/v1/" ;// 
+var apiBaseUrl = builder.Configuration["ApiSettings:MaesAuthApiUrl"] ?? "https://maeshome.ddns.net/api/v1/";
+var worldBetApiUrl = builder.Configuration["ApiSettings:WorldBetApiUrl"] ?? "https://maeshome.ddns.net/apiworldbet/api/v1/";
 
 // ? Configurer les options JSON globalement pour Blazor
 builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -36,6 +37,12 @@ builder.Services.AddHttpClient("API", client =>
     client.BaseAddress = new Uri(apiBaseUrl);
 })
 .AddHttpMessageHandler<CustomAuthorizationHandler>();
+// HttpClient pour WorldBet API
+builder.Services.AddHttpClient("WorldBetAPI", client =>
+{
+    client.BaseAddress = new Uri(worldBetApiUrl);
+})
+.AddHttpMessageHandler<CustomAuthorizationHandler>();
 
 // ? HttpClient par d�faut qui utilise le client "API" configur�
 builder.Services.AddScoped(sp => 
@@ -49,5 +56,10 @@ builder.Services.AddScoped<IMfaService, MfaService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IApplicationConfigService, ApplicationConfigService>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+//worldbet
+builder.Services.AddScoped<WorldBetApiClient>();
+builder.Services.AddScoped<ITournamentService, TournamentService>();
+builder.Services.AddScoped<IPronosticService, PronosticService>();
+builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
 await builder.Build().RunAsync();

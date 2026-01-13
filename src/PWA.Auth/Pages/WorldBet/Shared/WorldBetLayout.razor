@@ -1,0 +1,91 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+
+<div class="worldbet-header">
+    <div class="badge-container">
+        <div class="trophy-icon"> <i class="bi bi-trophy-fill"></i></div>
+        <div class="title-group">
+            <h2>WorldBet</h2>
+            <span class="year">2026</span>
+        </div>
+    </div>
+    @* <p class="tagline">Pronostiquez et gagnez entre amis</p> *@
+    <WorldBetNavigation />
+    
+    <div class="worldbet-content">
+        @Body
+    </div>
+</div>
+
+<style>
+    .worldbet-header {
+        padding: 2rem 1rem 1rem;
+        text-align: center;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .badge-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .worldbet-content {
+        padding: 2rem 1rem;
+    }
+    
+    .trophy-icon {
+        font-size: 3rem;
+        animation: bounce 2s infinite;
+    }
+    
+    .title-group {
+        text-align: left;
+    }
+    
+    .title-group h2 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+    
+    .year {
+        font-size: 1.5rem;
+        color: #ffc107;
+        font-weight: bold;
+    }
+    
+    .tagline {
+        margin: 0.75rem 0 0 0;
+        font-size: 0.95rem;
+        opacity: 0.9;
+        font-style: italic;
+    }
+    
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    @@media (max-width: 768px) {
+        .badge-container {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .title-group {
+            text-align: center;
+        }
+        
+        .title-group h2 {
+            font-size: 2rem;
+        }
+        
+        .trophy-icon {
+            font-size: 2.5rem;
+        }
+    }
+</style>

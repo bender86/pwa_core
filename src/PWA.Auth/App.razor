@@ -18,26 +18,20 @@
         <NotFound>
             <PageTitle>Non trouv�</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
-                <p role="alert">Sorry nothing to this address</p>
+                <p role="alert">D�sol�, cette page n'existe pas.</p>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
 
 @code {
-    // Composant pour rediriger vers /login si non authentifi�
     public class RedirectToLogin : ComponentBase
     {
         [Inject] private NavigationManager Navigation { get; set; } = null!;
-
+        
         protected override void OnInitialized()
         {
-            // Rediriger vers /login si on est � la racine
-            var uri = new Uri(Navigation.Uri);
-            if (uri.AbsolutePath == "/")
-            {
-                Navigation.NavigateTo("/login", replace: true);
-            }
+            Navigation.NavigateTo("/login", replace: true);
         }
     }
 }
