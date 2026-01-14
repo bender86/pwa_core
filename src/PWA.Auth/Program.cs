@@ -11,6 +11,27 @@ using System.Text.Json;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app"); 
 builder.RootComponents.Add<HeadOutlet>("head::after");
+// Load configuration files based on environment
+var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+
+// Load appsettings.Development.json if in Development
+if (builder.HostEnvironment.IsDevelopment())
+{
+    try
+    {
+        using var devResponse = await http.GetAsync("appsettings.Development.json");
+        if (devResponse.IsSuccessStatusCode)
+        {
+            using var devStream = await devResponse.Content.ReadAsStreamAsync();
+            builder.Configuration.AddJsonStream(devStream);
+            Console.WriteLine("? Development settings loaded");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"?? Could not load Development settings: {ex.Message}");
+    }
+}
 
 // Configuration de l'API
 var apiBaseUrl = builder.Configuration["ApiSettings:MaesAuthApiUrl"] ?? "https://maeshome.ddns.net/api/v1/";

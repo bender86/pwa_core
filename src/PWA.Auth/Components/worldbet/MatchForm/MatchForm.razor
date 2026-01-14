@@ -1,0 +1,156 @@
+@* Components/worldbet/MatchForm/MatchForm.razor *@
+@using dto.worldbet.Models
+@using dto.worldbet.Requests
+@using dto.worldbet.Enums
+
+@namespace PWA.Auth.Components.worldbet
+
+<EditForm Model="@Model" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            @ErrorMessage
+        </div>
+    }
+    
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Phase *</label>
+            <select @bind="Model.PhaseId" class="form-select" required disabled="@IsLoading">
+                <option value="0">Sélectionnez une phase</option>
+                @foreach (var phase in Phases)
+                {
+                    <option value="@phase.PhaseId">@phase.Name</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Groupe (optionnel)</label>
+            <select @bind="Model.GroupLetter" class="form-select" disabled="@IsLoading">
+                <option value="">Aucun</option>
+                @for (char c = 'A'; c <= 'H'; c++)
+                {
+                    <option value="@c.ToString()">Groupe @c</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Équipe 1 *</label>
+            <select @bind="Model.Team1Id" class="form-select" required disabled="@IsLoading">
+                <option value="0">Sélectionnez une équipe</option>
+                @foreach (var team in Teams)
+                {
+                    <option value="@team.TeamId">@team.Name</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Équipe 2 *</label>
+            <select @bind="Model.Team2Id" class="form-select" required disabled="@IsLoading">
+                <option value="0">Sélectionnez une équipe</option>
+                @foreach (var team in Teams)
+                {
+                    <option value="@team.TeamId">@team.Name</option>
+                }
+            </select>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Date et heure *</label>
+            <input type="datetime-local" 
+                   @bind="Model.ScheduledDate" 
+                   @bind:after="UpdateLockDate"
+                   class="form-control" 
+                   required 
+                   disabled="@IsLoading" />
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Lieu</label>
+            <input type="text" 
+                   @bind="Model.Venue" 
+                   class="form-control" 
+                   placeholder="Ex: Stade de France, Paris" 
+                   disabled="@IsLoading" />
+            <small class="text-muted">Nom du stade où se joue le match</small>
+        </div>
+        
+        <div class="col-md-4">
+            <label class="form-label">Numéro du match</label>
+            <input type="number" 
+                   @bind="Model.MatchNumber" 
+                   class="form-control" 
+                   placeholder="Ex: 1, 2, 3..." 
+                   disabled="@IsLoading" />
+            <small class="text-muted">Numéro séquentiel du match</small>
+        </div>
+        
+        <div class="col-md-4">
+            <label class="form-label">Score Équipe 1</label>
+            <input type="number" 
+                   @bind="Model.ScoreTeam1" 
+                   class="form-control" 
+                   min="0" 
+                   disabled="@IsLoading" />
+            <small class="text-muted">Laisser vide si pas encore joue</small>
+        </div>
+        
+        <div class="col-md-4">
+            <label class="form-label">Score Équipe 2</label>
+            <input type="number" 
+                   @bind="Model.ScoreTeam2" 
+                   class="form-control" 
+                   min="0" 
+                   disabled="@IsLoading" />
+            <small class="text-muted">Laisser vide si pas encore joue</small>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Statut</label>
+            <select @bind="Model.Status" class="form-select" disabled="@IsLoading">
+                <option value="@MatchStatus.Scheduled">Programmé</option>
+                <option value="@MatchStatus.Live">En cours</option>
+                <option value="@MatchStatus.Finished">Terminé</option>
+                <option value="@MatchStatus.Postponed">Reporté</option>
+            </select>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">
+                Verrouillage des pronostics
+                <i class="bi bi-info-circle text-muted" 
+                title="Date limite pour placer un pronostic"></i>
+            </label>
+            <input type="datetime-local" 
+                @bind="Model.LockPronosticsAt" 
+                class="form-control" 
+                disabled="@IsLoading" />
+            <small class="text-muted">Automatiquement défini à 5 min avant le match</small>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public CreateMatchRequest Model { get; set; } = new();
+    [Parameter] public List<TeamDto> Teams { get; set; } = new();
+    [Parameter] public List<PhaseDto> Phases { get; set; } = new();
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    private async Task HandleSubmit()
+    {
+        await OnSubmit.InvokeAsync();
+    }
+
+    private void UpdateLockDate()
+    {
+        // Automatically set lock date to 5 minutes before match
+        Model.LockPronosticsAt = Model.ScheduledDate.AddMinutes(-5);
+    }
+}

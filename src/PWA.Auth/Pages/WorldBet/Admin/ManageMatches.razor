@@ -1,6 +1,9 @@
 @page "/worldbet/admin/matches"
+@* Components/worldbet/MatchForm/MatchForm.razor *@
 @using PWA.Auth.Pages.WorldBet.Shared
+@using PWA.Auth.Components.worldbet
 @using dto.worldbet.Models
+@using dto.worldbet.Requests
 @using dto.worldbet.Enums
 @layout WorldBetLayout
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
@@ -13,32 +16,47 @@
     <div class="page-header">
         <h3>📋 Gérer les Matches</h3>
         <button class="btn btn-primary" @onclick="ShowCreateModal">
-            <span>➕</span> Créer un Match
+            <i class="bi bi-plus-circle"></i> Créer un Match
         </button>
     </div>
 
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
     <!-- Filtres -->
-    <div class="filters mb-4">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <select @bind="filterPhase" @bind:after="FilterMatches" class="form-select">
-                    <option value="">Toutes les phases</option>
-                    <option value="Groups">Phase de Poules</option>
-                    <option value="RoundOf16">8èmes de finale</option>
-                    <option value="QuarterFinals">Quarts de finale</option>
-                    <option value="SemiFinals">Demi-finales</option>
-                    <option value="Final">Finale</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select @bind="filterGroup" @bind:after="FilterMatches" class="form-select">
-                    <option value="">Tous les groupes</option>
-                    @for (char c = 'A'; c <= 'H'; c++)
-                    {
-                        <option value="@c">Groupe @c</option>
-                    }
-                </select>
-            </div>
+<div class="filters mb-4">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <select @bind="filterPhase" @bind:after="FilterMatches" class="form-select">
+                <option value="">Toutes les phases</option>
+                @foreach (var phase in allPhases)
+                {
+                    <option value="@phase.Name">@phase.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select @bind="filterGroup" @bind:after="FilterMatches" class="form-select">
+                <option value="">Tous les groupes</option>
+                @foreach (var group in availableGroups)
+                {
+                    <option value="@group">Groupe @group</option>
+                }
+            </select>
+        </div>
             <div class="col-md-3">
                 <select @bind="filterStatus" @bind:after="FilterMatches" class="form-select">
                     <option value="">Tous les statuts</option>
@@ -56,18 +74,19 @@
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Chargement...</p>
         </div>
     }
     else if (!filteredMatches.Any())
     {
         <div class="alert alert-info">
-            Aucun match trouvé avec ces critères.
+            <i class="bi bi-info-circle"></i> Aucun match trouvé avec ces critères.
         </div>
     }
     else
     {
         <div class="matches-table">
-            <table class="table">
+            <table class="table table-hover">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -113,11 +132,15 @@
                             <td>@match.Venue</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" @onclick="() => EditMatch(match)">
-                                        ✏️
+                                    <button class="btn btn-outline-primary" 
+                                            @onclick="() => EditMatch(match)"
+                                            title="Modifier">
+                                        <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger" @onclick="() => DeleteMatch(match)">
-                                        🗑️
+                                    <button class="btn btn-outline-danger" 
+                                            @onclick="() => ConfirmDelete(match)"
+                                            title="Supprimer">
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </td>
@@ -137,101 +160,85 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(isEditMode ? "Modifier le Match" : "Créer un Match")</h5>
+                    <h5 class="modal-title">
+                        @(isEditMode ? "Modifier le Match" : "Créer un Match")
+                    </h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
-                    <EditForm Model="@currentMatch" OnValidSubmit="SaveMatch">
-                        <DataAnnotationsValidator />
-                        
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Phase</label>
-                                <select @bind="currentMatch.PhaseId" class="form-select" required>
-                                    <option value="0">Sélectionnez une phase</option>
-                                    <option value="1">Phase de Poules</option>
-                                    <option value="2">8èmes de finale</option>
-                                    <option value="3">Quarts de finale</option>
-                                    <option value="4">Demi-finales</option>
-                                    <option value="5">Finale</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Groupe (optionnel)</label>
-                                <select @bind="currentMatch.GroupLetter" class="form-select">
-                                    <option value="">Aucun</option>
-                                    @for (char c = 'A'; c <= 'H'; c++)
-                                    {
-                                        <option value="@c.ToString()">Groupe @c</option>
-                                    }
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Équipe 1</label>
-                                <select @bind="currentMatch.Team1Id" class="form-select" required>
-                                    <option value="0">Sélectionnez une équipe</option>
-                                    @* Charger dynamiquement depuis l'API *@
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Équipe 2</label>
-                                <select @bind="currentMatch.Team2Id" class="form-select" required>
-                                    <option value="0">Sélectionnez une équipe</option>
-                                    @* Charger dynamiquement depuis l'API *@
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Date et heure</label>
-                                <input type="datetime-local" @bind="currentMatch.ScheduledDate" class="form-control" required />
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Lieu</label>
-                                <input type="text" @bind="currentMatch.Venue" class="form-control" placeholder="Stade..." />
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Numéro du match</label>
-                                <input type="number" @bind="currentMatch.MatchNumber" class="form-control" />
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Score Équipe 1</label>
-                                <input type="number" @bind="currentMatch.ScoreTeam1" class="form-control" min="0" />
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Score Équipe 2</label>
-                                <input type="number" @bind="currentMatch.ScoreTeam2" class="form-control" min="0" />
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Statut</label>
-                                <select @bind="currentMatch.Status" class="form-select">
-                                    <option value="@MatchStatus.Scheduled">Programmé</option>
-                                    <option value="@MatchStatus.Live">En cours</option>
-                                    <option value="@MatchStatus.Finished">Terminé</option>
-                                    <option value="@MatchStatus.Postponed">Reporté</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Verrouillage des pronostics</label>
-                                <input type="datetime-local" @bind="currentMatch.LockPronosticsAt" class="form-control" />
-                            </div>
+                    <MatchForm Model="@currentRequest"
+                               Teams="@allTeams"
+                               Phases="@allPhases"
+                               IsLoading="@isSaving"
+                               ErrorMessage="@modalError"
+                               OnSubmit="SaveMatch" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            @onclick="CloseModal"
+                            disabled="@isSaving">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-primary" 
+                            @onclick="SaveMatch"
+                            disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        @(isEditMode ? "Modifier" : "Créer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Confirmation Suppression -->
+@if (showDeleteConfirm)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    @if (matchToDelete != null)
+                    {
+                        <p>Êtes-vous sûr de vouloir supprimer ce match ?</p>
+                        <p class="fw-bold">
+                            @matchToDelete.Team1Name vs @matchToDelete.Team2Name
+                            <br />
+                            <small class="text-muted">@matchToDelete.ScheduledDate.ToString("dd/MM/yyyy HH:mm")</small>
+                        </p>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Cette action est irréversible.
                         </div>
-                        
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Annuler</button>
-                            <button type="submit" class="btn btn-primary">
-                                @(isEditMode ? "Modifier" : "Créer")
-                            </button>
-                        </div>
-                    </EditForm>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            @onclick="CancelDelete"
+                            disabled="@isDeleting">
+                        Annuler
+                    </button>
+                    <button type="button" 
+                            class="btn btn-danger" 
+                            @onclick="DeleteMatchConfirmed"
+                            disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Supprimer
+                    </button>
                 </div>
             </div>
         </div>
@@ -239,36 +246,74 @@
 }
 
 @code {
+    // Data
     private List<MatchDto> allMatches = new();
     private List<MatchDto> filteredMatches = new();
-    private bool isLoading = true;
+    private List<TeamDto> allTeams = new();
+    private List<PhaseDto> allPhases = new();
+    private List<string> availableGroups = new();
     
-    // Filtres
+    // Loading states
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isDeleting = false;
+    
+    // Filters
     private string filterPhase = "";
     private string filterGroup = "";
     private string filterStatus = "";
     
-    // Modal
+    // Modal states
     private bool showModal = false;
+    private bool showDeleteConfirm = false;
     private bool isEditMode = false;
-    private MatchDto currentMatch = new();
+    
+    // Current data
+    private CreateMatchRequest currentRequest = new();
+    private int currentMatchId = 0;
+    private MatchDto? matchToDelete = null;
+    
+    // Messages
+    private string? errorMessage;
+    private string? successMessage;
+    private string? modalError;
     
     protected override async Task OnInitializedAsync()
     {
-        await LoadMatches();
+        await LoadAllData();
     }
     
-    private async Task LoadMatches()
+    private async Task LoadAllData()
     {
         isLoading = true;
         try
         {
-            allMatches = await TournamentService.GetAllMatchesAsync();
+            var matchesTask = TournamentService.GetAllMatchesAsync();
+            var teamsTask = TournamentService.GetAllTeamsAsync();
+            var phasesTask = TournamentService.GetAllPhasesAsync();
+            
+            await Task.WhenAll(matchesTask, teamsTask, phasesTask);
+            
+            allMatches = await matchesTask;
+            allTeams = await teamsTask;
+            allPhases = await phasesTask;
+
+            // ? Extract unique groups from matches
+            availableGroups = allMatches
+                .Where(m => !string.IsNullOrEmpty(m.GroupLetter))
+                .Select(m => m.GroupLetter!)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToList();
+            
+            FilterMatches();
+            
             FilterMatches();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erreur: {ex.Message}");
+            errorMessage = $"Erreur lors du chargement des données : {ex.Message}";
+            Console.WriteLine($"Error: {ex}");
         }
         finally
         {
@@ -282,26 +327,27 @@
             (string.IsNullOrEmpty(filterPhase) || m.PhaseName.Contains(filterPhase)) &&
             (string.IsNullOrEmpty(filterGroup) || m.GroupLetter == filterGroup) &&
             (string.IsNullOrEmpty(filterStatus) || m.Status.ToString() == filterStatus)
-        ).ToList();
+        ).OrderBy(m => m.ScheduledDate).ToList();
     }
     
     private void ShowCreateModal()
     {
-        currentMatch = new MatchDto
+        currentRequest = new CreateMatchRequest
         {
             ScheduledDate = DateTime.Now.AddDays(1),
             LockPronosticsAt = DateTime.Now.AddDays(1).AddMinutes(-5),
             Status = MatchStatus.Scheduled
         };
+        currentMatchId = 0;
         isEditMode = false;
+        modalError = null;
         showModal = true;
     }
     
     private void EditMatch(MatchDto match)
     {
-        currentMatch = new MatchDto
+        currentRequest = new CreateMatchRequest
         {
-            MatchId = match.MatchId,
             PhaseId = match.PhaseId,
             Team1Id = match.Team1Id,
             Team2Id = match.Team2Id,
@@ -314,43 +360,115 @@
             Status = match.Status,
             LockPronosticsAt = match.LockPronosticsAt
         };
+        currentMatchId = match.MatchId;
         isEditMode = true;
+        modalError = null;
         showModal = true;
     }
     
     private async Task SaveMatch()
     {
+        isSaving = true;
+        modalError = null;
+        
         try
         {
             if (isEditMode)
             {
-                // await TournamentService.UpdateMatchAsync(currentMatch);
+                var updateRequest = new UpdateMatchRequest
+                {
+                    PhaseId = currentRequest.PhaseId,
+                    Team1Id = currentRequest.Team1Id,
+                    Team2Id = currentRequest.Team2Id,
+                    ScheduledDate = currentRequest.ScheduledDate,
+                    Venue = currentRequest.Venue,
+                    MatchNumber = currentRequest.MatchNumber,
+                    GroupLetter = currentRequest.GroupLetter,
+                    ScoreTeam1 = currentRequest.ScoreTeam1,
+                    ScoreTeam2 = currentRequest.ScoreTeam2,
+                    Status = currentRequest.Status,
+                    LockPronosticsAt = currentRequest.LockPronosticsAt
+                };
+                
+                await TournamentService.UpdateMatchAsync(currentMatchId, updateRequest);
+                successMessage = "Match modifié avec succès !";
             }
             else
             {
-                // await TournamentService.CreateMatchAsync(currentMatch);
+                await TournamentService.CreateMatchAsync(currentRequest);
+                successMessage = "Match créé avec succès !";
             }
             
-            await LoadMatches();
+            await LoadAllData();
             CloseModal();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erreur: {ex.Message}");
+            modalError = $"Erreur : {ex.Message}";
+            Console.WriteLine($"Error saving match: {ex}");
+        }
+        finally
+        {
+            isSaving = false;
         }
     }
     
-    private async Task DeleteMatch(MatchDto match)
+    private void ConfirmDelete(MatchDto match)
     {
-        // TODO: Impl�menter la suppression
-        // await TournamentService.DeleteMatchAsync(match.MatchId);
-        await LoadMatches();
+        matchToDelete = match;
+        showDeleteConfirm = true;
+    }
+    
+    private void CancelDelete()
+    {
+        matchToDelete = null;
+        showDeleteConfirm = false;
+    }
+    
+    private async Task DeleteMatchConfirmed()
+    {
+        if (matchToDelete == null) return;
+        
+        isDeleting = true;
+        try
+        {
+            var success = await TournamentService.DeleteMatchAsync(matchToDelete.MatchId);
+            
+            if (success)
+            {
+                successMessage = "Match supprimé avec succès !";
+                await LoadAllData();
+            }
+            else
+            {
+                errorMessage = "Match introuvable.";
+            }
+            
+            CancelDelete();
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+            CancelDelete();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de la suppression : {ex.Message}";
+            Console.WriteLine($"Error deleting match: {ex}");
+            CancelDelete();
+        }
+        finally
+        {
+            isDeleting = false;
+        }
     }
     
     private void CloseModal()
     {
         showModal = false;
-        currentMatch = new();
+        currentRequest = new();
+        currentMatchId = 0;
+        modalError = null;
     }
     
     private string GetStatusColor(MatchStatus status) => status switch
@@ -397,6 +515,10 @@
         border-bottom: 2px solid #dee2e6;
     }
     
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
     .score {
         font-weight: bold;
         font-size: 1.1rem;
@@ -404,5 +526,9 @@
     
     .modal-backdrop {
         background: rgba(0,0,0,0.5);
+    }
+    
+    .modal {
+        overflow-y: auto;
     }
 </style>
