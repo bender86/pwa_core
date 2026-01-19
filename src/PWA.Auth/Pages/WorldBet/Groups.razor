@@ -1,0 +1,560 @@
+@page "/worldbet/groups"
+@using PWA.Auth.Pages.WorldBet.Shared
+@using dto.worldbet.Models
+@using dto.worldbet.Enums
+@layout WorldBetLayout
+@inject ITournamentService TournamentService
+@inject IPronosticService PronosticService
+@attribute [Authorize]
+
+<PageTitle>Groupes</PageTitle>
+
+<div class="groups-page">
+    <div class="page-header">
+        <div>
+            <h3>🏆 Phase de Groupes</h3>
+            <p class="text-muted">Classements et matches par groupe</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Chargement des groupes...</p>
+        </div>
+    }
+    else if (!groups.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Aucun groupe disponible pour le moment.
+        </div>
+    }
+    else
+    {
+        <!-- Group Selection -->
+        <div class="group-selector mb-4">
+            <select @bind="selectedGroup" @bind:after="() => SelectGroup(selectedGroup)" class="form-select form-select-lg">
+                <option value="">-- Sélectionner un groupe --</option>
+                @foreach (var group in groups)
+                {
+                    <option value="@group">Groupe @group</option>
+                }
+            </select>
+        </div>
+
+        @if (!string.IsNullOrEmpty(selectedGroup))
+        {
+            <div class="row g-4">
+                <!-- Standings Column -->
+                <div class="col-lg-5">
+                    <div class="standings-card">
+                        <div class="card-header">
+                            <h5>
+                                <i class="bi bi-trophy"></i> Classement - Groupe @selectedGroup
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (isLoadingStandings)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                </div>
+                            }
+                            else if (!currentStandings.Any())
+                            {
+                                <div class="p-4 text-muted text-center">
+                                    <i class="bi bi-info-circle"></i> Pas encore de classement
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table standings-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th class="position-col">#</th>
+                                                <th>Équipe</th>
+                                                <th class="text-center">J</th>
+                                                <th class="text-center">V</th>
+                                                <th class="text-center">N</th>
+                                                <th class="text-center">D</th>
+                                                <th class="text-center">BP</th>
+                                                <th class="text-center">BC</th>
+                                                <th class="text-center">Diff</th>
+                                                <th class="text-center points-col">Pts</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @{ int position = 1; }
+                                            @foreach (var standing in currentStandings)
+                                            {
+                                                <tr class="@GetStandingClass(position)">
+                                                    <td class="position-col">
+                                                        <span class="position-badge @GetPositionBadgeClass(position)">
+                                                            @position
+                                                        </span>
+                                                    </td>
+                                                    <td class="team-name">
+                                                        <strong>@standing.TeamName</strong>
+                                                    </td>
+                                                    <td class="text-center">@standing.Played</td>
+                                                    <td class="text-center text-success">@standing.Won</td>
+                                                    <td class="text-center text-secondary">@standing.Drawn</td>
+                                                    <td class="text-center text-danger">@standing.Lost</td>
+                                                    <td class="text-center">@standing.GoalsFor</td>
+                                                    <td class="text-center">@standing.GoalsAgainst</td>
+                                                    <td class="text-center">
+                                                        <span class="@(standing.GoalDifference >= 0 ? "text-success" : "text-danger")">
+                                                            @(standing.GoalDifference > 0 ? "+" : "")@standing.GoalDifference
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center points-col">
+                                                        <strong>@standing.Points</strong>
+                                                    </td>
+                                                </tr>
+                                                position++;
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="legend p-3 bg-light border-top">
+                                    <small>
+                                        <span class="qualification-mark qualified me-3">■ Qualifié</span>
+                                        <span class="qualification-mark eliminated">■ Éliminé</span>
+                                    </small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matches Column -->
+                <div class="col-lg-7">
+                    <div class="matches-card">
+                        <div class="card-header">
+                            <h5>
+                                <i class="bi bi-calendar-event"></i> Matches - Groupe @selectedGroup
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (isLoadingMatches)
+                            {
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary"></div>
+                                </div>
+                            }
+                            else if (!currentMatches.Any())
+                            {
+                                <div class="text-muted text-center py-4">
+                                    <i class="bi bi-info-circle"></i> Aucun match programmé
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="matches-list">
+                                @foreach (var match in currentMatches.OrderBy(m => m.ScheduledDate))
+                                {
+                                    var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
+                                    
+                                    <MatchCard Match="@match" 
+                                            HasPronostic="@hasProno" 
+                                            UserPronostic="@prono"
+                                            OnPronosticSaved="@HandlePronosticSaved" />
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+</div>
+
+
+@code {
+    private List<string> groups = new();
+    private string selectedGroup = "";
+    private List<GroupStandingDto> currentStandings = new();
+    private List<MatchDto> currentMatches = new();
+    private Dictionary<int, PronosticDto> userPronostics = new();
+
+    private bool isLoading = true;
+    private bool isLoadingStandings = false;
+    private bool isLoadingMatches = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+    }
+
+    private async Task LoadGroups()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            // Get all matches to extract unique groups
+            var allMatches = await TournamentService.GetAllMatchesAsync();
+            
+            groups = allMatches
+                .Where(m => !string.IsNullOrEmpty(m.GroupLetter))
+                .Select(m => m.GroupLetter!)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToList();
+
+            if (groups.Any())
+            {
+                await SelectGroup(groups.First());
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement des groupes : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectGroup(string group)
+    {
+        selectedGroup = group;
+        await Task.WhenAll(LoadStandings(), LoadMatches(), LoadPronostics());
+    }
+
+    private async Task LoadStandings()
+    {
+        isLoadingStandings = true;
+
+        try
+        {
+            currentStandings = await TournamentService.GetGroupStandingsAsync(selectedGroup);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement du classement : {ex.Message}";
+        }
+        finally
+        {
+            isLoadingStandings = false;
+        }
+    }
+
+    private async Task LoadMatches()
+    {
+        isLoadingMatches = true;
+
+        try
+        {
+            currentMatches = await TournamentService.GetGroupMatchesAsync(selectedGroup);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement des matches : {ex.Message}";
+        }
+        finally
+        {
+            isLoadingMatches = false;
+        }
+    }
+
+    private async Task LoadPronostics()
+    {
+        try
+        {
+            var pronostics = await PronosticService.GetMyPronosticsAsync();
+            userPronostics = pronostics.ToDictionary(p => p.MatchId, p => p);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement des pronostics : {ex.Message}";
+        }
+    }
+
+    
+
+    private async Task HandlePronosticSaved(PronosticDto prono)
+    {
+        // Update local dictionary
+        userPronostics[prono.MatchId] = prono;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetStandingClass(int position)
+    {
+        if (position <= 2) return "qualified";
+        if (position >= 3) return "eliminated";
+        return "";
+    }
+
+    private string GetPositionBadgeClass(int position)
+    {
+        if (position <= 2) return "bg-success";
+        if (position >= 3) return "bg-secondary";
+        return "";
+    }
+
+    private RenderFragment GetMatchStatusBadge(MatchStatus status) => status switch
+    {
+        MatchStatus.Live => @<span class="badge bg-success"><i class="bi bi-broadcast"></i> En cours</span>,
+        MatchStatus.Finished => @<span class="badge bg-primary">Terminé</span>,
+        MatchStatus.Postponed => @<span class="badge bg-warning">Reporté</span>,
+        _ => @<span class="badge bg-secondary">Programmé</span>
+    };
+}
+
+<style>
+    .groups-page {
+        padding: 1rem 0;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    /* Group Selector */
+    .group-selector {
+        max-width: 400px;
+    }
+
+    .group-selector .form-select {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-weight: 600;
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .group-selector .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    /* Standings Card */
+    .standings-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+        height: fit-content;
+    }
+
+    .standings-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border: none;
+    }
+
+    .standings-card .card-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .standings-table {
+        font-size: 0.9rem;
+    }
+
+    .standings-table thead {
+        background: #f8f9fa;
+    }
+
+    .standings-table th {
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 0.75rem 0.5rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .standings-table td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+    }
+
+    .position-col {
+        width: 50px;
+        text-align: center;
+    }
+
+    .points-col {
+        width: 60px;
+        font-weight: bold;
+        background: #fff8e1;
+    }
+
+    .position-badge {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        border-radius: 50%;
+        font-weight: bold;
+        color: white;
+    }
+
+    .team-name {
+        font-weight: 500;
+    }
+
+    .standings-table tbody tr.qualified {
+        background-color: #d4edda;
+    }
+
+    .standings-table tbody tr.eliminated {
+        background-color: #f8f9fa;
+    }
+
+    .legend {
+        font-size: 0.85rem;
+    }
+
+    .qualification-mark {
+        font-weight: 600;
+    }
+
+    .qualification-mark.qualified {
+        color: #28a745;
+    }
+
+    .qualification-mark.eliminated {
+        color: #6c757d;
+    }
+
+    /* Matches Card */
+    .matches-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .matches-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border: none;
+    }
+
+    .matches-card .card-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .matches-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .match-item {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        transition: all 0.2s;
+        border: 2px solid #e9ecef;
+    }
+
+    .match-item:hover {
+        background: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .match-item.finished {
+        border-color: #667eea;
+        background: #f8f9fa;
+    }
+
+    .match-date {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.75rem;
+    }
+
+    .match-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .team-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .team-name {
+        font-weight: 600;
+        flex: 1;
+    }
+
+    .team-score {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #6c757d;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .team-score.has-score {
+        color: #667eea;
+    }
+
+    .match-status {
+        text-align: center;
+    }
+
+    /* Mobile Responsive */
+    @@media (max-width: 992px) {
+        .group-selector {
+            max-width: 100%;
+        }
+
+        .standings-table {
+            font-size: 0.8rem;
+        }
+
+        .standings-table th,
+        .standings-table td {
+            padding: 0.5rem 0.25rem;
+        }
+
+        .position-badge {
+            width: 25px;
+            height: 25px;
+            line-height: 25px;
+            font-size: 0.8rem;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .group-selector .form-select {
+            font-size: 1rem;
+        }
+
+        .team-score {
+            font-size: 1.2rem;
+        }
+
+        .match-item {
+            padding: 0.75rem;
+        }
+    }
+</style>

@@ -1,0 +1,373 @@
+@* Components/WorldBet/PronosticModal/PronosticModal.razor *@
+@using dto.worldbet.Models
+@using dto.worldbet.Requests
+@inject IPronosticService PronosticService
+@inject ILogger<PronosticModal> Logger
+
+@if (Show && Match != null)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-lightning-fill"></i> Votre Pronostic
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Match Info -->
+                    <div class="match-header mb-4">
+                        <div class="text-center mb-2">
+                            <span class="badge bg-secondary">@Match.PhaseName</span>
+                            @if (!string.IsNullOrEmpty(Match.GroupLetter))
+                            {
+                                <span class="badge bg-info ms-1">Groupe @Match.GroupLetter</span>
+                            }
+                        </div>
+                        <div class="match-teams">
+                            <div class="team">
+                                <div class="team-name">@Match.Team1Name</div>
+                            </div>
+                            <div class="vs">VS</div>
+                            <div class="team">
+                                <div class="team-name">@Match.Team2Name</div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> @Match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                            <br />
+                            <small class="text-warning">
+                                <i class="bi bi-clock"></i> Fermeture : @Match.LockPronosticsAt.ToString("dd/MM HH:mm")
+                            </small>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @errorMessage
+                        </div>
+                    }
+
+                    <!-- Score Input -->
+                    <div class="pronostic-input">
+                        <div class="score-container">
+                            <div class="score-team">
+                                <label class="form-label">@Match.Team1Name</label>
+                                <input type="number" 
+                                       class="form-control form-control-lg text-center score-input" 
+                                       @bind="team1Score"
+                                       min="0"
+                                       max="20"
+                                       placeholder="?" />
+                            </div>
+                            <div class="score-separator">-</div>
+                            <div class="score-team">
+                                <label class="form-label">@Match.Team2Name</label>
+                                <input type="number" 
+                                       class="form-control form-control-lg text-center score-input" 
+                                       @bind="team2Score"
+                                       min="0"
+                                       max="20"
+                                       placeholder="?" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            @onclick="Close"
+                            disabled="@isSaving">
+                        <i class="bi bi-x-lg"></i> Annuler
+                    </button>
+                    <button type="button" 
+                            class="btn btn-success" 
+                            @onclick="SavePronostic"
+                            disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-lightning-fill me-1"></i>
+                        }
+                        Valider
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public MatchDto? Match { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<PronosticDto> OnSaved { get; set; }
+
+    private int? team1Score;
+    private int? team2Score;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Show && Match != null)
+        {
+            await LoadExistingPronostic();
+        }
+    }
+
+    private async Task LoadExistingPronostic()
+    {
+        try
+        {
+            var existing = await PronosticService.GetMyPronosticForMatchAsync(Match!.MatchId);
+            if (existing != null)
+            {
+                team1Score = existing.PredictedScoreTeam1;
+                team2Score = existing.PredictedScoreTeam2;
+            }
+            else
+            {
+                team1Score = null;
+                team2Score = null;
+            }
+        }
+        catch
+        {
+            team1Score = null;
+            team2Score = null;
+        }
+    }
+
+    private async Task SavePronostic()
+    {
+        if (Match == null) return;
+
+        if (!team1Score.HasValue || !team2Score.HasValue)
+        {
+            errorMessage = "Veuillez saisir les deux scores.";
+            return;
+        }
+
+        if (team1Score < 0 || team1Score > 20 || team2Score < 0 || team2Score > 20)
+        {
+            errorMessage = "Les scores doivent être entre 0 et 20.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreatePronosticRequest
+            {
+                MatchId = Match.MatchId,
+                PredictedScoreTeam1 = team1Score.Value,
+                PredictedScoreTeam2 = team2Score.Value
+            };
+
+            var saved = await PronosticService.CreateOrUpdatePronosticAsync(request);
+            await OnSaved.InvokeAsync(saved);
+            await Close();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur : {ex.Message}";
+            Logger.LogError(ex, "Error saving pronostic");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task Close()
+    {
+        team1Score = null;
+        team2Score = null;
+        errorMessage = null;
+        await OnClose.InvokeAsync();
+    }
+}
+
+<style>
+    .modal-backdrop {
+        background: rgba(0,0,0,0.5);
+    }
+
+    .modal {
+        overflow-y: auto;
+    }
+
+    .match-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: -1rem -1rem 1.5rem -1rem;
+    }
+
+    .match-teams {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+
+    .team {
+        flex: 1;
+        text-align: center;
+    }
+
+    .team-name {
+        font-size: 1.25rem;
+        font-weight: bold;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .vs {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: rgba(255,255,255,0.8);
+        padding: 0 1rem;
+    }
+
+    .pronostic-input {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+    }
+
+    .score-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+    }
+
+    .score-team {
+        flex: 1;
+        text-align: center;
+    }
+
+    .score-team label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.9rem;
+    }
+
+    .score-input {
+        font-size: 2rem !important;
+        font-weight: bold;
+        height: 80px;
+        border: 3px solid #dee2e6;
+        transition: all 0.3s;
+    }
+
+    .score-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .score-separator {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #6c757d;
+        padding-top: 2rem;
+    }
+
+    @@media (max-width: 768px) {
+        .match-header {
+            padding: 1rem;
+            margin: -0.75rem -0.75rem 1rem -0.75rem;
+        }
+
+        .team-name {
+            font-size: 1rem;
+        }
+
+        .vs {
+            font-size: 1.2rem;
+            padding: 0 0.5rem;
+        }
+
+        .pronostic-input {
+            padding: 1rem;
+        }
+
+        .score-container {
+            gap: 1rem;
+        }
+
+        .score-input {
+            font-size: 1.5rem !important;
+            height: 60px;
+        }
+
+        .score-separator {
+            font-size: 1.5rem;
+            padding-top: 1.5rem;
+        }
+
+        .score-team label {
+            font-size: 0.8rem;
+        }
+
+        .modal-footer {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .modal-footer .btn {
+            width: 100%;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .match-teams {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .vs {
+            transform: rotate(90deg);
+            padding: 0.5rem 0;
+        }
+
+        .score-container {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .score-separator {
+            display: none;
+        }
+
+        .score-team {
+            width: 100%;
+        }
+
+        .score-input {
+            width: 100%;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+
+        .modal-body {
+            padding: 0.75rem;
+        }
+    }
+</style>

@@ -1,80 +1,519 @@
 ﻿@page "/worldbet"
-@layout WorldBetLayout;
-@using PWA.Auth.Services;
+@layout WorldBetLayout
+@using dto.worldbet.Models
+@using dto.worldbet.Enums
 @inject ITournamentService TournamentService
+@inject IPronosticService PronosticService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>WorldBet - Accueil</PageTitle>
 
-<h1>Bienvenue sur WorldBet</h1>
+<div class="worldbet-home">
+    <div class="hero-section text-center mb-5">
+        <h1 class="display-4">🏆 Bienvenue sur WorldBet</h1>
+        <p class="lead text-muted">Pronostiquez et gagnez !</p>
+    </div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Prochains matches</h5>
-                @if (upcomingMatches == null)
+    <!-- Prochains matches - Carousel -->
+    <div class="section mb-5">
+        <div class="section-header">
+            <h3><i class="bi bi-calendar-event"></i> Prochains Matches</h3>
+            <p class="text-muted">Faites vos pronostics avant le verrouillage</p>
+        </div>
+
+        @if (isLoadingUpcoming)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2">Chargement...</p>
+            </div>
+        }
+        else if (!upcomingMatches.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Aucun match à venir pour le moment
+            </div>
+        }
+        else
+        {
+            <div id="upcomingMatchesCarousel" class="carousel slide" data-bs-ride="false">
+                <div class="carousel-indicators">
+                    @for (int i = 0; i < upcomingMatches.Count; i++)
+                    {
+                        <button type="button" 
+                                data-bs-target="#upcomingMatchesCarousel" 
+                                data-bs-slide-to="@i" 
+                                class="@(i == 0 ? "active" : "")"
+                                aria-current="@(i == 0 ? "true" : "false")" 
+                                aria-label="Slide @(i + 1)">
+                        </button>
+                    }
+                </div>
+                
+                <div class="carousel-inner">
+                    @for (int i = 0; i < upcomingMatches.Count; i++)
+                    {
+                        var match = upcomingMatches[i];
+                        var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
+                        var isActive = i == 0;
+
+                        <div class="carousel-item @(isActive ? "active" : "")">
+                            <div class="carousel-card-wrapper">
+                                <MatchCard Match="@match" 
+                                           HasPronostic="@hasProno" 
+                                           UserPronostic="@prono"
+                                           OnPronosticSaved="@HandlePronosticSaved" />
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                @if (upcomingMatches.Count > 1)
                 {
-                    <p><em>Chargement...</em></p>
-                }
-                else if (!upcomingMatches.Any())
-                {
-                    <p>Aucun match à venir</p>
-                }
-                else
-                {
-                    <ul class="list-group">
-                        @foreach (var match in upcomingMatches.Take(5))
-                        {
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span>@match.Team1Name vs @match.Team2Name</span>
-                                    <small class="text-muted">@match.ScheduledDate.ToString("dd/MM HH:mm")</small>
-                                </div>
-                            </li>
-                        }
-                    </ul>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#upcomingMatchesCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#upcomingMatchesCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
                 }
             </div>
-        </div>
+        }
     </div>
-    
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Derniers résultats</h5>
-                @if (recentMatches == null)
+
+    <!-- Derniers résultats -->
+    <div class="section">
+        <div class="section-header">
+            <h3><i class="bi bi-trophy-fill"></i> Derniers Résultats</h3>
+            <p class="text-muted">Les matches récemment terminés</p>
+        </div>
+
+        @if (isLoadingRecent)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2">Chargement...</p>
+            </div>
+        }
+        else if (!recentMatches.Any())
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Aucun résultat disponible
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var match in recentMatches)
                 {
-                    <p><em>Chargement...</em></p>
+                    var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
+                    
+                    <div class="col-lg-6 mb-3">
+                        <MatchCard Match="@match" 
+                                   HasPronostic="@hasProno" 
+                                   UserPronostic="@prono"
+                                   OnPronosticSaved="@HandlePronosticSaved" />
+                    </div>
                 }
-                else if (!recentMatches.Any())
-                {
-                    <p>Aucun résultat disponible</p>
-                }
-                else
-                {
-                    <ul class="list-group">
-                        @foreach (var match in recentMatches.Take(5))
-                        {
-                            <li class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span>@match.Team1Name @match.ScoreTeam1 - @match.ScoreTeam2 @match.Team2Name</span>
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
+            </div>
+        }
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="bi bi-lightning-fill"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>@userPronostics.Count</h4>
+                    <p>Pronostics actifs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>@upcomingMatches.Count</h4>
+                    <p>Matches à venir</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="bi bi-trophy"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>@recentMatches.Count</h4>
+                    <p>Résultats récents</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @code {
-    private List<dto.worldbet.Models.MatchDto>? upcomingMatches;
-    private List<dto.worldbet.Models.MatchDto>? recentMatches;
+    private List<MatchDto> upcomingMatches = new();
+    private List<MatchDto> recentMatches = new();
+    private Dictionary<int, PronosticDto> userPronostics = new();
+
+    private bool isLoadingUpcoming = true;
+    private bool isLoadingRecent = true;
 
     protected override async Task OnInitializedAsync()
     {
-        upcomingMatches = await TournamentService.GetUpcomingMatchesAsync(5);
-        recentMatches = await TournamentService.GetRecentMatchesAsync(5);
+        await Task.WhenAll(
+            LoadUpcomingMatches(),
+            LoadRecentMatches(),
+            LoadPronostics()
+        );
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && upcomingMatches.Any())
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("initializeCarousel", "upcomingMatchesCarousel");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing carousel: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task LoadUpcomingMatches()
+    {
+        isLoadingUpcoming = true;
+        try
+        {
+            upcomingMatches = await TournamentService.GetUpcomingMatchesAsync(10);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading upcoming matches: {ex.Message}");
+            upcomingMatches = new();
+        }
+        finally
+        {
+            isLoadingUpcoming = false;
+        }
+    }
+
+    private async Task LoadRecentMatches()
+    {
+        isLoadingRecent = true;
+        try
+        {
+            recentMatches = await TournamentService.GetRecentMatchesAsync(6);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading recent matches: {ex.Message}");
+            recentMatches = new();
+        }
+        finally
+        {
+            isLoadingRecent = false;
+        }
+    }
+
+    private async Task LoadPronostics()
+    {
+        try
+        {
+            var pronostics = await PronosticService.GetMyPronosticsAsync();
+            userPronostics = pronostics.ToDictionary(p => p.MatchId, p => p);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading pronostics: {ex.Message}");
+            userPronostics = new();
+        }
+    }
+
+    private async Task HandlePronosticSaved(PronosticDto prono)
+    {
+        userPronostics[prono.MatchId] = prono;
+        await InvokeAsync(StateHasChanged);
     }
 }
+
+<style>
+    .worldbet-home {
+        padding: 2rem 0;
+        overflow-x: hidden; /* Empêche le scroll horizontal */
+    }
+
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 16px;
+        margin-bottom: 3rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    .hero-section h1 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .section {
+        margin-bottom: 3rem;
+        overflow-x: hidden; /* Empêche le débordement */
+    }
+
+    .section-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .section-header p {
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    /* Carousel Customization */
+    .carousel {
+        position: relative;
+        overflow: visible; /* Permet de voir les contrôles */
+        margin: 0 60px; /* Espace pour les contrôles */
+    }
+
+    .carousel-card-wrapper {
+        padding: 0 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .carousel-indicators {
+        margin-bottom: -2rem;
+        position: relative;
+        bottom: auto;
+        margin-top: 1rem;
+    }
+
+    .carousel-indicators [data-bs-target] {
+        background-color: #667eea;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: none;
+        opacity: 0.5;
+    }
+
+    .carousel-indicators .active {
+        opacity: 1;
+    }
+
+    .carousel-control-prev,
+    .carousel-control-next {
+        width: 50px;
+        height: 50px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 1;
+        z-index: 1;
+    }
+
+    .carousel-control-prev {
+        left: -55px;
+    }
+
+    .carousel-control-next {
+        right: -55px;
+    }
+
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+        width: 50px;
+        height: 50px;
+        background-color: rgba(102, 126, 234, 0.8);
+        border-radius: 50%;
+        background-size: 50%;
+    }
+
+    .carousel-control-prev:hover .carousel-control-prev-icon,
+    .carousel-control-next:hover .carousel-control-next-icon {
+        background-color: rgba(102, 126, 234, 1);
+    }
+
+    .carousel-item {
+        padding: 2rem 0;
+        min-height: 400px;
+    }
+
+    /* Stats Cards */
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+
+    .stat-icon {
+        font-size: 3rem;
+        color: #667eea;
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-radius: 12px;
+    }
+
+    .stat-content h4 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        color: #333;
+    }
+
+    .stat-content p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    /* Mobile Responsive */
+    @@media (max-width: 992px) {
+        .carousel {
+            margin: 0 50px;
+        }
+
+        .carousel-control-prev {
+            left: -45px;
+        }
+
+        .carousel-control-next {
+            right: -45px;
+        }
+
+        .carousel-card-wrapper {
+            padding: 0 0.5rem;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .hero-section {
+            padding: 2rem 1rem;
+        }
+
+        .hero-section h1 {
+            font-size: 2rem;
+        }
+
+        .carousel {
+            margin: 0 45px;
+        }
+
+        .carousel-control-prev {
+            left: -40px;
+        }
+
+        .carousel-control-next {
+            right: -40px;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 40px;
+            height: 40px;
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .carousel-card-wrapper {
+            padding: 0 0.5rem;
+        }
+
+        .carousel-item {
+            min-height: 450px;
+        }
+
+        .stat-card {
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+        }
+
+        .stat-content h4 {
+            font-size: 1.5rem;
+        }
+
+        .section-header h3 {
+            font-size: 1.5rem;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .worldbet-home {
+            padding: 1rem 0;
+        }
+
+        .carousel {
+            margin: 0; /* Pas de marge sur très petit écran */
+        }
+
+        /* Contrôles au-dessus du contenu sur mobile */
+        .carousel-control-prev {
+            left: 10px;
+        }
+
+        .carousel-control-next {
+            right: 10px;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 35px;
+            height: 35px;
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            width: 35px;
+            height: 35px;
+        }
+
+        .stat-card {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+    }
+</style>

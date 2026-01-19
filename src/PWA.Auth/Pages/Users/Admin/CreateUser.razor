@@ -82,7 +82,7 @@
                 
                 // Rediriger vers la liste après 3 secondes
                 await Task.Delay(3000);
-                Navigation.NavigateTo("/admin/manageusers");
+                Navigation.NavigateTo("/admin/users");
             }
             else
             {
@@ -101,6 +101,6 @@
 
     private void GoBack()
     {
-        Navigation.NavigateTo("/admin/manageusers");
+        Navigation.NavigateTo("/admin/users");
     }
 }

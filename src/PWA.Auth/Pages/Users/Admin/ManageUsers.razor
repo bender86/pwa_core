@@ -1,5 +1,5 @@
 @* Pages/Admin/ManageUsers.razor *@
-@page "/admin/manageusers"
+@page "/admin/users"
 @attribute [Authorize(Roles = "Admin")]
 @using dto.user.Models
 @using dto.user.Enums
@@ -225,7 +225,7 @@
 
     private async Task ApproveUser(int userId)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Approve this user and activate their account?"))
+        if (await JSInterop.ConfirmAsync("Approve this user and activate their account?"))
         {
             await ChangeUserStatus(userId, UserStatus.Active);
         }
@@ -233,7 +233,7 @@
 
     private async Task RejectUser(int userId)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Reject this user registration?"))
+        if (await JSInterop.ConfirmAsync("Reject this user registration?"))
         {
             await ChangeUserStatus(userId, UserStatus.Rejected);
         }
@@ -241,7 +241,7 @@
 
     private async Task SuspendUser(int userId)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Suspend this user account?"))
+        if (await JSInterop.ConfirmAsync("Suspend this user account?"))
         {
             await ChangeUserStatus(userId, UserStatus.Suspended);
         }
@@ -249,7 +249,7 @@
 
     private async Task ReactivateUser(int userId)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Reactivate this user account?"))
+        if (await JSInterop.ConfirmAsync("Reactivate this user account?"))
         {
             await ChangeUserStatus(userId, UserStatus.Active);
         }
@@ -278,7 +278,7 @@
 
     private async Task DeleteUser(int userId)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to permanently delete this user?"))
+        if (await JSInterop.ConfirmAsync("Are you sure you want to permanently delete this user?"))
         {
             try
             {

@@ -46,6 +46,10 @@ namespace PWA.Auth.Services
         //manage password
         Task<ApiResponse<object>> RequestPasswordReset(string email);
         Task<ApiResponse<object>> ResetPassword(ResetPasswordRequest request);
+        // Application management methods
+        Task<ApiResponse<List<UserApplicationDto>>> GetUserApplications(int userId);
+        Task<ApiResponse<UserApplicationDto>> AssignApplication(AssignApplicationRequest request);
+        Task<ApiResponse<bool>> RemoveApplication(RemoveApplicationRequest request);
 
     }
 }

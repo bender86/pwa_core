@@ -1,30 +1,39 @@
-﻿<CascadingAuthenticationState>
+﻿@* App.razor *@
+@using PWA.Auth.Components
+@inject IJSRuntime JSRuntime
+
+<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated != true)
                     {
-                        <RedirectToLogin />
+                        <App.RedirectToLogin />
                     }
                     else
                     {
-                        <p role="alert">Vous n'�tes pas autoris� � acc�der � cette ressource.</p>
+                        <p role="alert">Vous n'etes pas autorisé à accéder à cette ressource.</p>
                     }
                 </NotAuthorized>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
-            <PageTitle>Non trouv�</PageTitle>
+            <PageTitle>Non trouvé</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
-                <p role="alert">D�sol�, cette page n'existe pas.</p>
+                <p role="alert">D�solé, cette page n'existe pas.</p>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
 
 @code {
+    protected override void OnInitialized()
+    {
+        JSInterop.Initialize(JSRuntime);
+    }
+
     public class RedirectToLogin : ComponentBase
     {
         [Inject] private NavigationManager Navigation { get; set; } = null!;

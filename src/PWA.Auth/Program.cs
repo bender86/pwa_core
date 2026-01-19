@@ -75,6 +75,7 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMfaService, MfaService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
 builder.Services.AddScoped<IApplicationConfigService, ApplicationConfigService>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 //worldbet

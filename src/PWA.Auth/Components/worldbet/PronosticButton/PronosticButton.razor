@@ -1,0 +1,56 @@
+@* Components/WorldBet/PronosticButton/PronosticButton.razor *@
+@using dto.worldbet.Models
+@using dto.worldbet.Enums
+
+@if (CanPronostic())
+{
+    <button class="btn btn-@Size @(Outline ? "btn-outline-success" : "btn-success") @CssClass" 
+            @onclick="OnClick"
+            title="@(HasPronostic ? "Modifier mon pronostic" : "Pronostiquer")">
+        <i class="bi bi-lightning-fill"></i>
+        @if (!IconOnly)
+        {
+            <span class="ms-1">@(HasPronostic ? "Modifier" : "Pronostiquer")</span>
+        }
+    </button>
+}
+else if (Match.Status == MatchStatus.Finished)
+{
+    <button class="btn btn-@Size btn-@(Outline ? "outline-" : "")secondary @CssClass" 
+            disabled
+            title="Match terminé">
+        <i class="bi bi-check-circle"></i>
+        @if (!IconOnly)
+        {
+            <span class="ms-1">Terminé</span>
+        }
+    </button>
+}
+else
+{
+    <button class="btn btn-@Size btn-@(Outline ? "outline-" : "")secondary @CssClass" 
+            disabled
+            title="Pronostics fermés">
+        <i class="bi bi-lock-fill"></i>
+        @if (!IconOnly)
+        {
+            <span class="ms-1">Fermé</span>
+        }
+    </button>
+}
+
+@code {
+    [Parameter, EditorRequired] public MatchDto Match { get; set; } = null!;
+    [Parameter] public bool HasPronostic { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string Size { get; set; } = ""; // "", "sm", "lg"
+    [Parameter] public bool Outline { get; set; } = false;
+    [Parameter] public bool IconOnly { get; set; } = false;
+    [Parameter] public string CssClass { get; set; } = "";
+
+    private bool CanPronostic()
+    {
+        return Match.Status == MatchStatus.Scheduled 
+            && DateTime.UtcNow < Match.LockPronosticsAt;
+    }
+}

@@ -1,0 +1,679 @@
+@page "/worldbet/leaderboard"
+@using PWA.Auth.Pages.WorldBet.Shared
+@using dto.worldbet.Models
+@layout WorldBetLayout
+@inject ILeaderboardService LeaderboardService
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Classement</PageTitle>
+
+<div class="leaderboard-page">
+    <div class="page-header">
+        <div>
+            <h3>🏆 Classement Général</h3>
+            <p class="text-muted">Les meilleurs pronostiqueurs du tournoi</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Chargement du classement...</p>
+        </div>
+    }
+    else if (!leaderboard.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Aucun joueur n'a encore marqué de points.
+        </div>
+    }
+    else
+    {
+        <!-- Podium (Top 3) -->
+        @if (leaderboard.Count >= 3)
+        {
+            <div class="podium-container">
+                <div class="podium">
+                    <!-- 2nd Place -->
+                    <div class="podium-place second">
+                        <div class="podium-medal">
+                            <i class="bi bi-award-fill"></i>
+                        </div>
+                        <div class="podium-player">
+                            <div class="player-avatar">
+                                <span>@GetInitials(leaderboard[1].DisplayName)</span>
+                            </div>
+                            <div class="player-name">@leaderboard[1].DisplayName</div>
+                            <div class="player-stats">
+                                <div class="stat">
+                                    <i class="bi bi-trophy-fill"></i> @leaderboard[1].TotalPoints pts
+                                </div>
+                                <div class="stat">
+                                    <i class="bi bi-bullseye"></i> @leaderboard[1].CorrectScores exacts
+                                </div>
+                            </div>
+                        </div>
+                        <div class="podium-rank">2</div>
+                    </div>
+
+                    <!-- 1st Place -->
+                    <div class="podium-place first">
+                        <div class="podium-crown">
+                            <i class="bi bi-gem"></i>
+                        </div>
+                        <div class="podium-medal">
+                            <i class="bi bi-award-fill"></i>
+                        </div>
+                        <div class="podium-player">
+                            <div class="player-avatar champion">
+                                <span>@GetInitials(leaderboard[0].DisplayName)</span>
+                            </div>
+                            <div class="player-name">@leaderboard[0].DisplayName</div>
+                            <div class="player-stats">
+                                <div class="stat">
+                                    <i class="bi bi-trophy-fill"></i> @leaderboard[0].TotalPoints pts
+                                </div>
+                                <div class="stat">
+                                    <i class="bi bi-bullseye"></i> @leaderboard[0].CorrectScores exacts
+                                </div>
+                            </div>
+                        </div>
+                        <div class="podium-rank">1</div>
+                    </div>
+
+                    <!-- 3rd Place -->
+                    <div class="podium-place third">
+                        <div class="podium-medal">
+                            <i class="bi bi-award-fill"></i>
+                        </div>
+                        <div class="podium-player">
+                            <div class="player-avatar">
+                                <span>@GetInitials(leaderboard[2].DisplayName)</span>
+                            </div>
+                            <div class="player-name">@leaderboard[2].DisplayName</div>
+                            <div class="player-stats">
+                                <div class="stat">
+                                    <i class="bi bi-trophy-fill"></i> @leaderboard[2].TotalPoints pts
+                                </div>
+                                <div class="stat">
+                                    <i class="bi bi-bullseye"></i> @leaderboard[2].CorrectScores exacts
+                                </div>
+                            </div>
+                        </div>
+                        <div class="podium-rank">3</div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- My Ranking Card -->
+        @if (currentPlayerRanking != null)
+        {
+            <div class="my-ranking-card @(currentPlayerRanking.Rank <= 3 ? "top-three" : "")">
+                <div class="ranking-header">
+                    <h5>
+                        <i class="bi bi-person-circle"></i> Votre Classement
+                    </h5>
+                </div>
+                <div class="ranking-body">
+                    <div class="rank-badge">
+                        <span class="rank-number">#{currentPlayerRanking.Rank}</span>
+                        @if (currentPlayerRanking.Rank <= 3)
+                        {
+                            <i class="bi bi-trophy-fill text-warning"></i>
+                        }
+                    </div>
+                    <div class="ranking-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">@currentPlayerRanking.TotalPoints</div>
+                            <div class="stat-label">Points</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">@currentPlayerRanking.PronosticsCount</div>
+                            <div class="stat-label">Pronostics</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">@currentPlayerRanking.CorrectScores</div>
+                            <div class="stat-label">Scores exacts</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">@GetSuccessRate(currentPlayerRanking).ToString("F1")%</div>
+                            <div class="stat-label">Taux de réussite</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Full Leaderboard Table -->
+        <div class="leaderboard-table-container">
+            <h4 class="mb-3">Classement Complet</h4>
+            <div class="table-responsive">
+                <table class="table leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rang</th>
+                            <th>Joueur</th>
+                            <th class="text-center">Points</th>
+                            <th class="text-center d-none d-md-table-cell">Pronostics</th>
+                            <th class="text-center d-none d-md-table-cell">Scores exacts</th>
+                            <th class="text-center d-none d-lg-table-cell">Taux de réussite</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var player in leaderboard)
+                        {
+                            <tr class="@(IsCurrentPlayer(player) ? "current-player" : "") @(player.Rank <= 3 ? "top-player" : "")">
+                                <td>
+                                    <div class="rank-cell">
+                                        <span class="rank-number @GetRankClass(player.Rank)">
+                                            @if (player.Rank <= 3)
+                                            {
+                                                <i class="bi bi-trophy-fill"></i>
+                                            }
+                                            #@player.Rank
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="player-cell">
+                                        <div class="player-avatar-small">
+                                            @GetInitials(player.DisplayName)
+                                        </div>
+                                        <span class="player-name-text">
+                                            @player.DisplayName
+                                            @if (IsCurrentPlayer(player))
+                                            {
+                                                <span class="badge bg-primary ms-2">Vous</span>
+                                            }
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <strong class="points-value">@player.TotalPoints</strong>
+                                </td>
+                                <td class="text-center d-none d-md-table-cell">
+                                    @player.PronosticsCount
+                                </td>
+                                <td class="text-center d-none d-md-table-cell">
+                                    <span class="badge bg-success">@player.CorrectScores</span>
+                                </td>
+                                <td class="text-center d-none d-lg-table-cell">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar @GetProgressBarClass(GetSuccessRate(player))" 
+                                             role="progressbar" 
+                                             style="width: @GetSuccessRate(player)%"
+                                             aria-valuenow="@GetSuccessRate(player)" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            @GetSuccessRate(player).ToString("F1")%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<LeaderboardDto> leaderboard = new();
+    private LeaderboardDto? currentPlayerRanking;
+    private int currentPlayerId = 0;
+
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLeaderboard();
+    }
+
+    private async Task LoadLeaderboard()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            // Get current user's player ID
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userIdClaim = user.FindFirst("id")?.Value;
+            
+            if (int.TryParse(userIdClaim, out int userId))
+            {
+                currentPlayerId = userId;
+            }
+
+            // Load leaderboard
+            leaderboard = await LeaderboardService.GetLeaderboardAsync();
+
+            // Find current player ranking
+            currentPlayerRanking = leaderboard.FirstOrDefault(p => p.PlayerId == currentPlayerId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement du classement : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetInitials(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return "??";
+
+        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        
+        return displayName.Length >= 2 
+            ? displayName.Substring(0, 2).ToUpper() 
+            : displayName.ToUpper();
+    }
+
+    private string GetRankClass(int rank) => rank switch
+    {
+        1 => "rank-gold",
+        2 => "rank-silver",
+        3 => "rank-bronze",
+        _ => ""
+    };
+
+    private string GetProgressBarClass(decimal successRate) => successRate switch
+    {
+        >= 75 => "bg-success",
+        >= 50 => "bg-info",
+        >= 25 => "bg-warning",
+        _ => "bg-danger"
+    };
+
+    private decimal GetSuccessRate(LeaderboardDto player)
+    {
+        if (player.PronosticsCount == 0)
+            return 0;
+
+        // Calculate success rate: (correct scores + correct winners) / total pronostics * 100
+        return Math.Round((decimal)(player.CorrectScores + player.CorrectWinners) / player.PronosticsCount * 100, 1);
+    }
+
+    private bool IsCurrentPlayer(LeaderboardDto player)
+    {
+        return player.PlayerId == currentPlayerId;
+    }
+}
+
+<style>
+    .leaderboard-page {
+        padding: 1rem 0;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    /* Podium */
+    .podium-container {
+        margin: 2rem 0 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+    }
+
+    .podium {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 1rem;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .podium-place {
+        flex: 1;
+        max-width: 280px;
+        position: relative;
+        text-align: center;
+    }
+
+    .podium-crown {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 2rem;
+        color: #ffd700;
+        animation: bounce 2s infinite;
+    }
+
+    @@keyframes bounce {
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    .podium-medal {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .podium-place.first .podium-medal {
+        color: #ffd700;
+    }
+
+    .podium-place.second .podium-medal {
+        color: #c0c0c0;
+    }
+
+    .podium-place.third .podium-medal {
+        color: #cd7f32;
+    }
+
+    .podium-player {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .player-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0 auto 1rem;
+        border: 4px solid #e9ecef;
+    }
+
+    .player-avatar.champion {
+        width: 100px;
+        height: 100px;
+        font-size: 2rem;
+        border-color: #ffd700;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+
+    .player-name {
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+        color: #333;
+    }
+
+    .player-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .player-stats .stat {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+
+    .podium-rank {
+        background: white;
+        color: #333;
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 1rem;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .podium-place.first {
+        order: 2;
+    }
+
+    .podium-place.second {
+        order: 1;
+    }
+
+    .podium-place.third {
+        order: 3;
+    }
+
+    .podium-place.first .podium-rank {
+        background: #ffd700;
+        padding: 1.5rem 1rem;
+    }
+
+    .podium-place.second .podium-rank {
+        background: #c0c0c0;
+        padding: 1.2rem 1rem;
+    }
+
+    .podium-place.third .podium-rank {
+        background: #cd7f32;
+        padding: 1rem;
+    }
+
+    /* My Ranking Card */
+    .my-ranking-card {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 3px solid #dee2e6;
+    }
+
+    .my-ranking-card.top-three {
+        border-color: #ffd700;
+        box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
+    }
+
+    .ranking-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+    }
+
+    .ranking-header h5 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+
+    .ranking-body {
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .rank-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .rank-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .ranking-stats {
+        display: flex;
+        gap: 2rem;
+        flex: 1;
+        flex-wrap: wrap;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    /* Leaderboard Table */
+    .leaderboard-table-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .leaderboard-table {
+        margin: 0;
+    }
+
+    .leaderboard-table thead {
+        background: #f8f9fa;
+    }
+
+    .leaderboard-table th {
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .leaderboard-table tbody tr {
+        transition: all 0.2s;
+    }
+
+    .leaderboard-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .leaderboard-table tbody tr.current-player {
+        background-color: #e7f3ff;
+        font-weight: 600;
+    }
+
+    .leaderboard-table tbody tr.top-player {
+        background-color: #fff8e1;
+    }
+
+    .rank-cell {
+        display: flex;
+        align-items: center;
+    }
+
+    .rank-number {
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+    }
+
+    .rank-gold {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #000;
+    }
+
+    .rank-silver {
+        background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+        color: #000;
+    }
+
+    .rank-bronze {
+        background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
+        color: #000;
+    }
+
+    .player-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .player-avatar-small {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.875rem;
+    }
+
+    .player-name-text {
+        font-weight: 500;
+    }
+
+    .points-value {
+        color: #667eea;
+        font-size: 1.1rem;
+    }
+
+    /* Mobile Responsive */
+    @@media (max-width: 768px) {
+        .podium {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .podium-place {
+            max-width: 100%;
+        }
+
+        .podium-place.first {
+            order: 1;
+        }
+
+        .podium-place.second {
+            order: 2;
+        }
+
+        .podium-place.third {
+            order: 3;
+        }
+
+        .ranking-body {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ranking-stats {
+            gap: 1rem;
+            justify-content: space-around;
+        }
+
+        .stat-item {
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>

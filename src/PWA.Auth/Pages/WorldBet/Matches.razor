@@ -1,0 +1,1093 @@
+@page "/worldbet/matches"
+@using PWA.Auth.Pages.WorldBet.Shared
+@using dto.worldbet.Models
+@using dto.worldbet.Requests
+@using dto.worldbet.Enums
+@layout WorldBetLayout
+@inject ITournamentService TournamentService
+@inject IPronosticService PronosticService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Matches</PageTitle>
+
+<div class="manage-matches">
+    <div class="page-header">
+        <h3>🏆 Matches du Tournoi</h3>
+        @if (isAdmin)
+        {
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Créer un Match
+            </button>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    <!-- Filtres -->
+    <div class="filters mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <select @bind="filterPhase" @bind:after="FilterMatches" class="form-select">
+                    <option value="">Toutes les phases</option>
+                    @foreach (var phase in allPhases)
+                    {
+                        <option value="@phase.Name">@phase.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select @bind="filterGroup" @bind:after="FilterMatches" class="form-select">
+                    <option value="">Tous les groupes</option>
+                    @foreach (var group in availableGroups)
+                    {
+                        <option value="@group">Groupe @group</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select @bind="filterStatus" @bind:after="FilterMatches" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="Scheduled">Programmé</option>
+                    <option value="Live">En cours</option>
+                    <option value="Finished">Terminé</option>
+                    <option value="Postponed">Reporté</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des matches -->
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Chargement...</p>
+        </div>
+    }
+    else if (!filteredMatches.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Aucun match trouvé avec ces critères.
+        </div>
+    }
+    else
+    {
+        <div class="matches-table">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Phase</th>
+                        <th>Groupe</th>
+                        <th>Match</th>
+                        <th>Score</th>
+                        <th>Mon Prono</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var match in filteredMatches)
+                    {
+                        <tr>
+                            <td>@match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@match.PhaseName</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(match.GroupLetter))
+                                {
+                                    <span class="badge bg-secondary">@match.GroupLetter</span>
+                                }
+                            </td>
+                            <td>
+                                <strong>@match.Team1Name</strong> vs <strong>@match.Team2Name</strong>
+                            </td>
+                            <td>
+                                @if (match.ScoreTeam1.HasValue && match.ScoreTeam2.HasValue)
+                                {
+                                    <span class="score">@match.ScoreTeam1 - @match.ScoreTeam2</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (userPronostics.TryGetValue(match.MatchId, out var prono))
+                                {
+                                    <span class="pronostic-badge">
+                                        <i class="bi bi-lightning-fill text-warning"></i>
+                                        @prono.PredictedScoreTeam1 - @prono.PredictedScoreTeam2
+                                    </span>
+                                }
+                                else if (CanPronostic(match))
+                                {
+                                    <span class="text-muted"><i class="bi bi-dash-lg"></i></span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-@GetStatusColor(match.Status)">
+                                    @GetStatusLabel(match.Status)
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <!-- Pronostic button for all users -->
+                                    @if (CanPronostic(match))
+                                    {
+                                        <button class="btn btn-outline-success" 
+                                                @onclick="() => ShowPronosticModal(match)"
+                                                title="@(userPronostics.ContainsKey(match.MatchId) ? "Modifier mon pronostic" : "Pronostiquer")">
+                                            <i class="bi bi-lightning-fill"></i>
+                                        </button>
+                                    }
+                                    else if (match.Status == MatchStatus.Finished)
+                                    {
+                                        <button class="btn btn-outline-secondary" 
+                                                disabled
+                                                title="Match terminé">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-secondary" 
+                                                disabled
+                                                title="Pronostics fermés">
+                                            <i class="bi bi-lock-fill"></i>
+                                        </button>
+                                    }
+
+                                    <!-- Admin actions -->
+                                    @if (isAdmin)
+                                    {
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="() => EditMatch(match)"
+                                                title="Modifier">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" 
+                                                @onclick="() => ConfirmDelete(match)"
+                                                title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Modal Pronostic -->
+@if (showPronosticModal && selectedMatch != null)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-lightning-fill"></i> Votre Pronostic
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="ClosePronosticModal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Match Info -->
+                    <div class="match-header mb-4">
+                        <div class="text-center mb-2">
+                            <span class="badge bg-secondary">@selectedMatch.PhaseName</span>
+                            @if (!string.IsNullOrEmpty(selectedMatch.GroupLetter))
+                            {
+                                <span class="badge bg-info">Groupe @selectedMatch.GroupLetter</span>
+                            }
+                        </div>
+                        <div class="match-teams">
+                            <div class="team">
+                                <div class="team-name">@selectedMatch.Team1Name</div>
+                            </div>
+                            <div class="vs">VS</div>
+                            <div class="team">
+                                <div class="team-name">@selectedMatch.Team2Name</div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> @selectedMatch.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                            <br />
+                            <small class="text-warning">
+                                <i class="bi bi-clock"></i> Fermeture des pronostics : @selectedMatch.LockPronosticsAt.ToString("dd/MM HH:mm")
+                            </small>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(pronosticError))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> @pronosticError
+                        </div>
+                    }
+
+                    <!-- Score Input -->
+                    <div class="pronostic-input">
+                        <div class="score-container">
+                            <div class="score-team">
+                                <label class="form-label">@selectedMatch.Team1Name</label>
+                                <input type="number" 
+                                       class="form-control form-control-lg text-center score-input" 
+                                       @bind="pronosticTeam1Score"
+                                       min="0"
+                                       max="20"
+                                       placeholder="?" />
+                            </div>
+                            <div class="score-separator">-</div>
+                            <div class="score-team">
+                                <label class="form-label">@selectedMatch.Team2Name</label>
+                                <input type="number" 
+                                       class="form-control form-control-lg text-center score-input" 
+                                       @bind="pronosticTeam2Score"
+                                       min="0"
+                                       max="20"
+                                       placeholder="?" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            @onclick="ClosePronosticModal"
+                            disabled="@isSavingPronostic">
+                        <i class="bi bi-x-lg"></i> Annuler
+                    </button>
+                    <button type="button" 
+                            class="btn btn-success" 
+                            @onclick="SavePronostic"
+                            disabled="@isSavingPronostic">
+                        @if (isSavingPronostic)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-lightning-fill me-1"></i>
+                        }
+                        Valider mon pronostic
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Créer/Éditer Match (Admin only) -->
+@if (showModal && isAdmin)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(isEditMode ? "Modifier le Match" : "Créer un Match")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <MatchForm Model="@currentRequest"
+                               Teams="@allTeams"
+                               Phases="@allPhases"
+                               IsLoading="@isSaving"
+                               ErrorMessage="@modalError"
+                               OnSubmit="SaveMatch" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Confirmation Suppression (Admin only) -->
+@if (showDeleteConfirm && isAdmin)
+{
+    <div class="modal-backdrop show"></div>
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    @if (matchToDelete != null)
+                    {
+                        <p>Êtes-vous sûr de vouloir supprimer ce match ?</p>
+                        <p class="fw-bold">
+                            @matchToDelete.Team1Name vs @matchToDelete.Team2Name
+                            <br />
+                            <small class="text-muted">@matchToDelete.ScheduledDate.ToString("dd/MM/yyyy HH:mm")</small>
+                        </p>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Cette action est irréversible.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            @onclick="CancelDelete"
+                            disabled="@isDeleting">
+                        Annuler
+                    </button>
+                    <button type="button" 
+                            class="btn btn-danger" 
+                            @onclick="DeleteMatchConfirmed"
+                            disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // User state
+    private bool isAdmin = false;
+    private Dictionary<int, PronosticDto> userPronostics = new(); // Key: MatchId
+
+    // Data
+    private List<MatchDto> allMatches = new();
+    private List<MatchDto> filteredMatches = new();
+    private List<TeamDto> allTeams = new();
+    private List<PhaseDto> allPhases = new();
+    private List<string> availableGroups = new();
+    
+    // Loading states
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isDeleting = false;
+    private bool isSavingPronostic = false;
+    
+    // Filters
+    private string filterPhase = "";
+    private string filterGroup = "";
+    private string filterStatus = "";
+    
+    // Modal states
+    private bool showModal = false;
+    private bool showDeleteConfirm = false;
+    private bool showPronosticModal = false;
+    private bool isEditMode = false;
+    
+    // Current data
+    private CreateMatchRequest currentRequest = new();
+    private int currentMatchId = 0;
+    private MatchDto? matchToDelete = null;
+    private MatchDto? selectedMatch = null;
+    
+    // Pronostic
+    private int? pronosticTeam1Score = null;
+    private int? pronosticTeam2Score = null;
+    
+    // Messages
+    private string? errorMessage;
+    private string? successMessage;
+    private string? modalError;
+    private string? pronosticError;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckUserRole();
+        await LoadAllData();
+    }
+
+    private async Task CheckUserRole()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        isAdmin = user.IsInRole("Admin");
+    }
+    
+    private async Task LoadAllData()
+    {
+        isLoading = true;
+        try
+        {
+            var matchesTask = TournamentService.GetAllMatchesAsync();
+            var teamsTask = TournamentService.GetAllTeamsAsync();
+            var phasesTask = TournamentService.GetAllPhasesAsync();
+            var pronosticsTask = PronosticService.GetMyPronosticsAsync();
+            
+            await Task.WhenAll(matchesTask, teamsTask, phasesTask, pronosticsTask);
+            
+            allMatches = await matchesTask;
+            allTeams = await teamsTask;
+            allPhases = await phasesTask;
+            
+            // Build pronostics dictionary
+            var pronostics = await pronosticsTask;
+            userPronostics = pronostics.ToDictionary(p => p.MatchId, p => p);
+
+            availableGroups = allMatches
+                .Where(m => !string.IsNullOrEmpty(m.GroupLetter))
+                .Select(m => m.GroupLetter!)
+                .Distinct()
+                .OrderBy(g => g)
+                .ToList();
+            
+            FilterMatches();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement des données : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private void FilterMatches()
+    {
+        filteredMatches = allMatches.Where(m =>
+            (string.IsNullOrEmpty(filterPhase) || m.PhaseName.Contains(filterPhase)) &&
+            (string.IsNullOrEmpty(filterGroup) || m.GroupLetter == filterGroup) &&
+            (string.IsNullOrEmpty(filterStatus) || m.Status.ToString() == filterStatus)
+        ).OrderBy(m => m.ScheduledDate).ToList();
+    }
+
+    private bool CanPronostic(MatchDto match)
+    {
+        return match.Status == MatchStatus.Scheduled 
+            && DateTime.UtcNow < match.LockPronosticsAt;
+    }
+
+    private async Task ShowPronosticModal(MatchDto match)
+    {
+        selectedMatch = match;
+        pronosticError = null;
+        
+        // Load existing pronostic if any
+        try
+        {
+            var existingPronostic = await PronosticService.GetMyPronosticForMatchAsync(match.MatchId);
+            if (existingPronostic != null)
+            {
+                pronosticTeam1Score = existingPronostic.PredictedScoreTeam1;
+                pronosticTeam2Score = existingPronostic.PredictedScoreTeam2;
+            }
+            else
+            {
+                pronosticTeam1Score = null;
+                pronosticTeam2Score = null;
+            }
+        }
+        catch
+        {
+            // No existing pronostic
+            pronosticTeam1Score = null;
+            pronosticTeam2Score = null;
+        }
+        
+        showPronosticModal = true;
+    }
+
+    private async Task SavePronostic()
+    {
+        if (selectedMatch == null) return;
+
+        if (!pronosticTeam1Score.HasValue || !pronosticTeam2Score.HasValue)
+        {
+            pronosticError = "Veuillez saisir les deux scores.";
+            return;
+        }
+
+        if (pronosticTeam1Score < 0 || pronosticTeam1Score > 20 || 
+            pronosticTeam2Score < 0 || pronosticTeam2Score > 20)
+        {
+            pronosticError = "Les scores doivent être entre 0 et 20.";
+            return;
+        }
+
+        isSavingPronostic = true;
+        pronosticError = null;
+
+        try
+        {
+            var request = new CreatePronosticRequest
+            {
+                MatchId = selectedMatch.MatchId,
+                PredictedScoreTeam1 = pronosticTeam1Score.Value,
+                PredictedScoreTeam2 = pronosticTeam2Score.Value
+            };
+
+            var savedPronostic = await PronosticService.CreateOrUpdatePronosticAsync(request);
+            
+            // Update local dictionary
+            userPronostics[selectedMatch.MatchId] = savedPronostic;
+            
+            successMessage = $"Pronostic enregistré : {pronosticTeam1Score}-{pronosticTeam2Score}";
+            ClosePronosticModal();
+        }
+        catch (Exception ex)
+        {
+            pronosticError = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isSavingPronostic = false;
+        }
+    }
+
+    private void ClosePronosticModal()
+    {
+        showPronosticModal = false;
+        selectedMatch = null;
+        pronosticTeam1Score = null;
+        pronosticTeam2Score = null;
+        pronosticError = null;
+    }
+    
+    private void ShowCreateModal()
+    {
+        if (!isAdmin) return;
+
+        currentRequest = new CreateMatchRequest
+        {
+            ScheduledDate = DateTime.Now.AddDays(1),
+            LockPronosticsAt = DateTime.Now.AddDays(1).AddMinutes(-5),
+            Status = MatchStatus.Scheduled
+        };
+        currentMatchId = 0;
+        isEditMode = false;
+        modalError = null;
+        showModal = true;
+    }
+    
+    private void EditMatch(MatchDto match)
+    {
+        if (!isAdmin) return;
+
+        currentRequest = new CreateMatchRequest
+        {
+            PhaseId = match.PhaseId,
+            Team1Id = match.Team1Id,
+            Team2Id = match.Team2Id,
+            ScheduledDate = match.ScheduledDate,
+            Venue = match.Venue,
+            MatchNumber = match.MatchNumber,
+            GroupLetter = match.GroupLetter,
+            ScoreTeam1 = match.ScoreTeam1,
+            ScoreTeam2 = match.ScoreTeam2,
+            Status = match.Status,
+            LockPronosticsAt = match.LockPronosticsAt
+        };
+        currentMatchId = match.MatchId;
+        isEditMode = true;
+        modalError = null;
+        showModal = true;
+    }
+    
+    private async Task SaveMatch()
+    {
+        if (!isAdmin) return;
+
+        isSaving = true;
+        modalError = null;
+        
+        try
+        {
+            if (isEditMode)
+            {
+                var updateRequest = new UpdateMatchRequest
+                {
+                    PhaseId = currentRequest.PhaseId,
+                    Team1Id = currentRequest.Team1Id,
+                    Team2Id = currentRequest.Team2Id,
+                    ScheduledDate = currentRequest.ScheduledDate,
+                    Venue = currentRequest.Venue,
+                    MatchNumber = currentRequest.MatchNumber,
+                    GroupLetter = currentRequest.GroupLetter,
+                    ScoreTeam1 = currentRequest.ScoreTeam1,
+                    ScoreTeam2 = currentRequest.ScoreTeam2,
+                    Status = currentRequest.Status,
+                    LockPronosticsAt = currentRequest.LockPronosticsAt
+                };
+                
+                await TournamentService.UpdateMatchAsync(currentMatchId, updateRequest);
+                successMessage = "Match modifié avec succès !";
+            }
+            else
+            {
+                await TournamentService.CreateMatchAsync(currentRequest);
+                successMessage = "Match créé avec succès !";
+            }
+            
+            await LoadAllData();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+    
+    private void ConfirmDelete(MatchDto match)
+    {
+        if (!isAdmin) return;
+
+        matchToDelete = match;
+        showDeleteConfirm = true;
+    }
+    
+    private void CancelDelete()
+    {
+        matchToDelete = null;
+        showDeleteConfirm = false;
+    }
+    
+    private async Task DeleteMatchConfirmed()
+    {
+        if (!isAdmin || matchToDelete == null) return;
+        
+        isDeleting = true;
+        try
+        {
+            var success = await TournamentService.DeleteMatchAsync(matchToDelete.MatchId);
+            
+            if (success)
+            {
+                successMessage = "Match supprimé avec succès !";
+                await LoadAllData();
+            }
+            else
+            {
+                errorMessage = "Match introuvable.";
+            }
+            
+            CancelDelete();
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+            CancelDelete();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de la suppression : {ex.Message}";
+            CancelDelete();
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+    
+    private void CloseModal()
+    {
+        showModal = false;
+        currentRequest = new();
+        currentMatchId = 0;
+        modalError = null;
+    }
+    
+    private string GetStatusColor(MatchStatus status) => status switch
+    {
+        MatchStatus.Scheduled => "secondary",
+        MatchStatus.Live => "success",
+        MatchStatus.Finished => "primary",
+        MatchStatus.Postponed => "warning",
+        _ => "secondary"
+    };
+    
+    private string GetStatusLabel(MatchStatus status) => status switch
+    {
+        MatchStatus.Scheduled => "Programmé",
+        MatchStatus.Live => "En cours",
+        MatchStatus.Finished => "Terminé",
+        MatchStatus.Postponed => "Reporté",
+        _ => status.ToString()
+    };
+}
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .matches-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .table {
+        margin: 0;
+    }
+
+    /* Mobile Cards */
+    .matches-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .match-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .match-card-header {
+        background: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .match-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .match-date {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .match-card-body {
+        padding: 1rem;
+    }
+
+    .match-teams {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .team-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .team-name {
+        font-weight: 600;
+        flex: 1;
+    }
+
+    .team-score {
+        font-size: 1.5rem;
+        font-weight: bold;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .match-pronostic {
+        background: #fff8e1;
+        padding: 0.5rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .match-card-footer {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .admin-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .admin-actions .btn {
+        flex: 1;
+    }
+    
+    .table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .score {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    
+    .modal-backdrop {
+        background: rgba(0,0,0,0.5);
+    }
+    
+    .modal {
+        overflow-y: auto;
+    }
+
+    /* Pronostic Modal Styles */
+    .match-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: -1rem -1rem 1.5rem -1rem;
+    }
+
+    .match-teams {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+
+    .team {
+        flex: 1;
+        text-align: center;
+    }
+
+    .team-name {
+        font-size: 1.25rem;
+        font-weight: bold;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .vs {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: rgba(255,255,255,0.8);
+        padding: 0 1rem;
+    }
+
+    .pronostic-input {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+    }
+
+    .score-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+    }
+
+    .score-team {
+        flex: 1;
+        text-align: center;
+    }
+
+    .score-team label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.9rem;
+    }
+
+    .score-input {
+        font-size: 2rem !important;
+        font-weight: bold;
+        height: 80px;
+        border: 3px solid #dee2e6;
+        transition: all 0.3s;
+    }
+
+    .score-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .score-separator {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #6c757d;
+        padding-top: 2rem;
+    }
+
+    .pronostic-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        background: #fff3cd;
+        border-radius: 4px;
+        font-weight: 600;
+        color: #856404;
+    }
+
+    /* Mobile Responsive */
+    @@media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .page-header h3 {
+            font-size: 1.5rem;
+        }
+
+        .page-header .btn {
+            width: 100%;
+        }
+
+        .filters .row {
+            gap: 0.5rem;
+        }
+
+        .filters .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+
+        .match-header {
+            padding: 1rem;
+            margin: -0.75rem -0.75rem 1rem -0.75rem;
+        }
+
+        .team-name {
+            font-size: 1rem;
+        }
+
+        .vs {
+            font-size: 1.2rem;
+            padding: 0 0.5rem;
+        }
+
+        .pronostic-input {
+            padding: 1rem;
+        }
+
+        .score-container {
+            gap: 1rem;
+        }
+
+        .score-input {
+            font-size: 1.5rem !important;
+            height: 60px;
+        }
+
+        .score-separator {
+            font-size: 1.5rem;
+            padding-top: 1.5rem;
+        }
+
+        .score-team label {
+            font-size: 0.8rem;
+        }
+
+        .modal-footer {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .modal-footer .btn {
+            width: 100%;
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+        }
+
+        .pronostic-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.4rem;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .match-teams {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .vs {
+            transform: rotate(90deg);
+            padding: 0.5rem 0;
+        }
+
+        .score-container {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .score-separator {
+            display: none;
+        }
+
+        .score-team {
+            width: 100%;
+        }
+
+        .score-input {
+            width: 100%;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+
+        .modal-body {
+            padding: 0.75rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+        }
+    }
+</style>

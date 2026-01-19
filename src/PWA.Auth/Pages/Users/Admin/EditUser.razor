@@ -1,0 +1,237 @@
+@* Pages/Admin/EditUser.razor *@
+@page "/admin/users/edit/{UserId:int}"
+@using dto.user.Models
+@using dto.common.Enums
+@using PWA.Auth.Components.UserForm
+@using PWA.Auth.Components.UserApplications
+@using PWA.Auth.Models
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@inject ILogger<EditUser> Logger
+
+<PageTitle>Edit User</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>
+                        <i class="bi bi-person-gear"></i> Edit User
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="/admin">Admin</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="/admin/users">Users</a>
+                            </li>
+                            <li class="breadcrumb-item active">Edit</li>
+                        </ol>
+                    </nav>
+                </div>
+                <button class="btn btn-outline-secondary" @onclick="NavigateBack">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading user information...</p>
+        </div>
+    }
+    else if (userData == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> User not found
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <!-- User Information -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-vcard"></i> User Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <UserForm Mode="FormMode.Edit"
+                                  InitialData="userData"
+                                  OnSubmit="HandleUpdateUser"
+                                  IsLoading="isSaving"
+                                  ErrorMessage="@errorMessage"
+                                  ShowAdminOptions="true"
+                                  ShowCancelButton="false" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Applications -->
+            <div class="col-lg-6">
+                <UserApplications UserId="@UserId" 
+                                  OnApplicationsChanged="HandleApplicationsChanged" />
+            </div>
+        </div>
+
+        <!-- User Metadata -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-info-circle"></i> User Metadata
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small">User ID</label>
+                                <div><strong>@userDetail?.Id</strong></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Username</label>
+                                <div><strong>@userDetail?.Email</strong></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Created Date</label>
+                                <div>@userDetail?.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">MFA Status</label>
+                                <div>
+                                    @if (userDetail?.MfaEnabled == true)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-shield-check"></i> Enabled
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-shield-x"></i> Disabled
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int UserId { get; set; }
+
+    private UserFormModel? userData;
+    private UserDetailResponse? userDetail;
+    private bool isLoading = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUser();
+    }
+
+    private async Task LoadUser()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await UserService.GetUserById(UserId);
+
+            if (result.Success && result.Data != null)
+            {
+                userDetail = result.Data;
+                userData = new UserFormModel
+                {
+                    Id = result.Data.Id,
+                    FirstName = result.Data.FirstName,
+                    LastName = result.Data.LastName,
+                    Email = result.Data.Email,
+                    IsAdmin = result.Data.IsAdmin??false,
+                    Active = result.Data.Active??false,
+                    MfaEnabled = result.Data.MfaEnabled??false,
+                    CreatedDate = result.Data.CreatedAt
+                };
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Failed to load user";
+                Logger.LogError("Failed to load user {UserId}: {Error}", UserId, result.ErrorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error loading user";
+            Logger.LogError(ex, "Error loading user {UserId}", UserId);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleUpdateUser(UserFormModel model)
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await UserService.UpdateUser(new UpdateUserRequest
+            {
+                Id = model.Id,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                IsAdmin = model.IsAdmin,
+                Active = model.Active
+            });
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/admin/users");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Failed to update user";
+                Logger.LogError("Failed to update user {UserId}: {Error}", UserId, result.ErrorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error updating user";
+            Logger.LogError(ex, "Error updating user {UserId}", UserId);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleApplicationsChanged()
+    {
+        // Refresh user data if needed
+        await LoadUser();
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/admin/users");
+    }
+}

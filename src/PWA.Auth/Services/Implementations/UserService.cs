@@ -166,9 +166,9 @@ namespace PWA.Auth.Services
         {
             try
             {
-                _logger.LogInformation("?? D�but GetCurrentUser");
+                _logger.LogInformation("?? Début GetCurrentUser");
                 
-                // ? Utiliser directement la m�thode existante de AuthService
+                // ? Utiliser directement la méthode existante de AuthService
                 var currentUser = await _authService.GetCurrentUserAsync();
                 
                 if (currentUser == null)
@@ -179,19 +179,19 @@ namespace PWA.Auth.Services
 
                 _logger.LogInformation($"? User from AuthService: {currentUser.Email}, ID: {currentUser.Id}");
 
-                // R�cup�rer les d�tails complets depuis l'API
+                // Récupérer les détails complets depuis l'API
                 var result = await GetUserById(currentUser.Id);
                 
                 if (result.Success && result.Data != null)
                 {
-                    _logger.LogInformation($"? UserDetail r�cup�r�: {result.Data.Email}");
+                    _logger.LogInformation($"? UserDetail récupéré: {result.Data.Email}");
                     return result.Data;
                 }
                 else
                 {
                     _logger.LogWarning($"? Erreur GetUserById: {result.ErrorMessage}");
                     
-                    // Fallback : cr�er un UserDetailResponse basique depuis currentUser
+                    // Fallback : créer un UserDetailResponse basique depuis currentUser
                     return new UserDetailResponse
                     {
                         Id = currentUser.Id,
@@ -208,7 +208,7 @@ namespace PWA.Auth.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "? Erreur lors de la r�cup�ration de l'utilisateur actuel");
+                _logger.LogError(ex, "? Erreur lors de la récupération de l'utilisateur actuel");
                 return null;
             }
         }
@@ -382,6 +382,95 @@ namespace PWA.Auth.Services
             {
                 _logger.LogError(ex, "Error resetting password");
                 return ApiResponse<object>.ErrorResponse($"Error: {ex.Message}", 500);
+            }
+        }
+
+        // Services/UserService.cs - Ajouter ces méthodes é la classe existante
+
+        public async Task<ApiResponse<List<UserApplicationDto>>> GetUserApplications(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Récupération des applications pour l'utilisateur: {UserId}", userId);
+
+                var response = await _httpClient.GetAsync($"user/{userId}/applications");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("échec récupération applications: {StatusCode}", response.StatusCode);
+                    return ApiResponse<List<UserApplicationDto>>.ErrorResponse(
+                        "Erreur lors de la récupération des applications",
+                        (int)response.StatusCode
+                    );
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<UserApplicationDto>>>();
+                return result ?? ApiResponse<List<UserApplicationDto>>.ErrorResponse("Réponse invalide", 500);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la récupération des applications");
+                return ApiResponse<List<UserApplicationDto>>.ErrorResponse($"Erreur: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ApiResponse<UserApplicationDto>> AssignApplication(AssignApplicationRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Attribution application {AppId} é l'utilisateur {UserId}", 
+                    request.ApplicationId, request.UserId);
+
+                var response = await _httpClient.PostAsJsonAsync("user/assign-application", request);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("échec attribution application: {StatusCode} - {Error}", 
+                        response.StatusCode, errorContent);
+                    return ApiResponse<UserApplicationDto>.ErrorResponse(
+                        errorContent,
+                        (int)response.StatusCode
+                    );
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<UserApplicationDto>>();
+                return result ?? ApiResponse<UserApplicationDto>.ErrorResponse("Réponse invalide", 500);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de l'attribution d'application");
+                return ApiResponse<UserApplicationDto>.ErrorResponse($"Erreur: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ApiResponse<bool>> RemoveApplication(RemoveApplicationRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Retrait application {AppId} de l'utilisateur {UserId}", 
+                    request.ApplicationId, request.UserId);
+
+                var response = await _httpClient.PostAsJsonAsync("user/remove-application", request);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("échec retrait application: {StatusCode} - {Error}", 
+                        response.StatusCode, errorContent);
+                    return ApiResponse<bool>.ErrorResponse(
+                        errorContent,
+                        (int)response.StatusCode
+                    );
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+                return result ?? ApiResponse<bool>.ErrorResponse("Réponse invalide", 500);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors du retrait d'application");
+                return ApiResponse<bool>.ErrorResponse($"Erreur: {ex.Message}", 500);
             }
         }
     }

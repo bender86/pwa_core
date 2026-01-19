@@ -19,5 +19,6 @@ namespace PWA.Auth.Models
         public bool IsAdmin { get; set; } = false;
         public bool Active { get; set; } = true;
         public bool MfaEnabled { get; set; } = false;
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     }
 }
