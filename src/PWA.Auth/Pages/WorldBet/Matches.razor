@@ -45,67 +45,69 @@
                      QuickFilter="@QuickFilter"
                      Class="mb-4">
             <ToolBarContent>
-                <MudText Typo="Typo.h6">Liste des Matches</MudText>
+                <MudText Typo="Typo.h6" Class="d-none d-md-flex">Liste des Matches</MudText>
                 <MudSpacer />
                 
-                <!-- Phase Filter -->
-                <MudSelect T="string" 
-                           Value="@filterPhase"
-                           ValueChanged="@((string value) => { filterPhase = value; FilterMatches(); })"
-                           Label="Phase" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense"
-                           Class="filter-select"
-                           Clearable="true"
-                           AdornmentIcon="@Icons.Material.Filled.FilterList">
-                    @foreach (var phase in allPhases)
-                    {
-                        <MudSelectItem Value="@phase.Name">@phase.Name</MudSelectItem>
-                    }
-                </MudSelect>
+                <div class="d-flex flex-column flex-md-row gap-2 w-100 w-md-auto">
+                    <!-- Phase Filter -->
+                    <MudSelect T="string" 
+                               Value="@filterPhase"
+                               ValueChanged="@((string value) => { filterPhase = value; FilterMatches(); })"
+                               Label="Phase" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Class="filter-select"
+                               Clearable="true"
+                               AdornmentIcon="@Icons.Material.Filled.FilterList">
+                        @foreach (var phase in allPhases)
+                        {
+                            <MudSelectItem Value="@phase.Name">@phase.Name</MudSelectItem>
+                        }
+                    </MudSelect>
 
-                <!-- Group Filter -->
-                <MudSelect T="string" 
-                           Value="@filterGroup"
-                           ValueChanged="@((string value) => { filterGroup = value; FilterMatches(); })"
-                           Label="Groupe" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense"
-                           Class="filter-select ms-2"
-                           Clearable="true"
-                           AdornmentIcon="@Icons.Material.Filled.Groups">
-                    @foreach (var group in availableGroups)
-                    {
-                        <MudSelectItem Value="@group">Groupe @group</MudSelectItem>
-                    }
-                </MudSelect>
+                    <!-- Group Filter -->
+                    <MudSelect T="string" 
+                               Value="@filterGroup"
+                               ValueChanged="@((string value) => { filterGroup = value; FilterMatches(); })"
+                               Label="Groupe" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Class="filter-select"
+                               Clearable="true"
+                               AdornmentIcon="@Icons.Material.Filled.Groups">
+                        @foreach (var group in availableGroups)
+                        {
+                            <MudSelectItem Value="@group">Groupe @group</MudSelectItem>
+                        }
+                    </MudSelect>
 
-                <!-- Status Filter -->
-                <MudSelect T="string" 
-                           Value="@filterStatus"
-                           ValueChanged="@((string value) => { filterStatus = value; FilterMatches(); })"
-                           Label="Statut" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense"
-                           Class="filter-select ms-2"
-                           Clearable="true"
-                           AdornmentIcon="@Icons.Material.Filled.Flag">
-                    <MudSelectItem Value="@nameof(MatchStatus.Scheduled)">Programmé</MudSelectItem>
-                    <MudSelectItem Value="@nameof(MatchStatus.Live)">En cours</MudSelectItem>
-                    <MudSelectItem Value="@nameof(MatchStatus.Finished)">Terminé</MudSelectItem>
-                    <MudSelectItem Value="@nameof(MatchStatus.Postponed)">Reporté</MudSelectItem>
-                </MudSelect>
+                    <!-- Status Filter -->
+                    <MudSelect T="string" 
+                               Value="@filterStatus"
+                               ValueChanged="@((string value) => { filterStatus = value; FilterMatches(); })"
+                               Label="Statut" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Class="filter-select"
+                               Clearable="true"
+                               AdornmentIcon="@Icons.Material.Filled.Flag">
+                        <MudSelectItem Value="@nameof(MatchStatus.Scheduled)">Programmé</MudSelectItem>
+                        <MudSelectItem Value="@nameof(MatchStatus.Live)">En cours</MudSelectItem>
+                        <MudSelectItem Value="@nameof(MatchStatus.Finished)">Terminé</MudSelectItem>
+                        <MudSelectItem Value="@nameof(MatchStatus.Postponed)">Reporté</MudSelectItem>
+                    </MudSelect>
 
-                <!-- Search -->
-                <MudTextField @bind-Value="searchString" 
-                              Placeholder="Rechercher..." 
-                              Adornment="Adornment.Start" 
-                              AdornmentIcon="@Icons.Material.Filled.Search"
-                              IconSize="Size.Medium" 
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Class="ms-2" 
-                              Immediate="true" />
+                    <!-- Search -->
+                    <MudTextField @bind-Value="searchString" 
+                                  Placeholder="Rechercher..." 
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  IconSize="Size.Medium" 
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Class="filter-select" 
+                                  Immediate="true" />
+                </div>
             </ToolBarContent>
             
             <Columns>
