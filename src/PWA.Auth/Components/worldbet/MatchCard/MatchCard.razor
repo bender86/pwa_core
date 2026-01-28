@@ -62,24 +62,15 @@
             </div>
         }
 
-        @* Show PronosticButton if pronostics are still open *@
-        @if (CanPronostic())
-        {
-            <div class="text-center">
-                <PronosticButton Match="@Match" 
-                                 HasPronostic="@HasPronostic" 
-                                 OnClick="@(() => showModal = true)" 
-                                 Size="sm" />
-            </div>
-        }
+        @* PronosticButton gère son propre modal *@
+        <div class="text-center">
+            <PronosticButton Match="@Match" 
+                 HasPronostic="@HasPronostic" 
+                 OnPronosticSaved="@OnPronosticSaved"
+                 Size="Small" />
+        </div>
     </div>
 </div>
-
-<!-- Pronostic Modal -->
-<PronosticModal Show="@showModal"
-                Match="@Match"
-                OnClose="@CloseModal"
-                OnSaved="@HandlePronosticSaved" />
 
 @code {
     [Parameter]
@@ -93,30 +84,6 @@
 
     [Parameter]
     public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
-
-    private bool showModal = false;
-
-    private bool CanPronostic()
-    {
-        return Match.Status == MatchStatus.Scheduled 
-            && DateTime.UtcNow < Match.LockPronosticsAt;
-    }
-
-    private void CloseModal()
-    {
-        showModal = false;
-    }
-
-    private async Task HandlePronosticSaved(PronosticDto prono)
-    {
-        showModal = false;
-        
-        // Notify parent component
-        if (OnPronosticSaved.HasDelegate)
-        {
-            await OnPronosticSaved.InvokeAsync(prono);
-        }
-    }
 
     private string GetStatusBadgeClass()
     {
@@ -138,6 +105,12 @@
             return "Verrouillé";
 
         return "Ouvert";
+    }
+
+    private bool CanPronostic()
+    {
+        return Match.Status == MatchStatus.Scheduled 
+            && DateTime.UtcNow < Match.LockPronosticsAt;
     }
 }
 

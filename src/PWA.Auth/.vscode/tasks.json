@@ -1,26 +1,68 @@
 {
-    "label": "?? Run Development",
-    "command": "dotnet",
-    "type": "shell",
-    "args": [
-        "watch",
-        "run",
-        "--project",
-        "${workspaceFolder}/PWA.Auth.csproj"
-    ],
-    "options": {
-        "env": {
-            "ASPNETCORE_ENVIRONMENT": "Development"
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "watch-run",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/PWA.Auth.csproj",
+                "--non-interactive",
+                "--urls",
+                "http://localhost:5074"
+            ],
+            "options": {
+                "env": {
+                    "ASPNETCORE_ENVIRONMENT": "Development"
+                }
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "custom",
+                "pattern": {
+                    "regexp": "."
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*dotnet watch.*$|^.*Building.*$",
+                    "endsPattern": "^.*Now listening on:.*http://localhost:5074.*$"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "build-dev",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/PWA.Auth.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "clean",
+                "${workspaceFolder}/PWA.Auth.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
         }
-    },
-    "problemMatcher": "$msCompile",
-    "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "focus": true
-    },
-    "group": {
-        "kind": "build",
-        "isDefault": true
-    }
+    ]
 }

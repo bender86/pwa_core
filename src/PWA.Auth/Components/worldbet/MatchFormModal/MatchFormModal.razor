@@ -1,0 +1,119 @@
+@* Components/worldbet/MatchFormModal/MatchFormModal.razor *@
+@using dto.worldbet.Models
+@using dto.worldbet.Requests
+@namespace PWA.Auth.Components.worldbet
+
+<MudDialog @bind-Visible="@IsVisible" 
+           Options="dialogOptions">
+    <TitleContent>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@(IsEditMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)" Class="me-2" />
+                @(IsEditMode ? "Modifier le Match" : "Créer un Match")
+            </MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                           OnClick="HandleCancel" 
+                           Size="Size.Small" />
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-4">
+            @if (Model != null && Teams != null && Phases != null)
+            {
+                <MatchForm Model="@Model"
+                           Teams="@Teams"
+                           Phases="@Phases"
+                           IsLoading="@IsLoading"
+                           ErrorMessage="@ErrorMessage"
+                           OnSubmit="HandleSubmit" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning">Chargement des données...</MudAlert>
+                <p>Model: @(Model != null ? "OK" : "NULL")</p>
+                <p>Teams: @(Teams != null ? $"{Teams.Count} équipes" : "NULL")</p>
+                <p>Phases: @(Phases != null ? $"{Phases.Count} phases" : "NULL")</p>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="HandleCancel" 
+                   Variant="Variant.Text"
+                   Disabled="@IsLoading">
+            Annuler
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private DialogOptions dialogOptions = new() 
+    { 
+        CloseButton = false,
+        MaxWidth = MaxWidth.Large, 
+        FullWidth = true,
+        BackdropClick = false,
+        CloseOnEscapeKey = false
+    };
+
+    [Parameter, EditorRequired]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public CreateMatchRequest Model { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public List<TeamDto> Teams { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public List<PhaseDto> Phases { get; set; } = new();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public bool IsEditMode { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine($"MatchFormModal - OnParametersSet - IsVisible: {IsVisible}, IsEditMode: {IsEditMode}");
+        if (Model != null)
+        {
+            Console.WriteLine($"  Model.ScheduledDate: {Model.ScheduledDate}");
+            Console.WriteLine($"  Model.PhaseId: {Model.PhaseId}, Team1Id: {Model.Team1Id}, Team2Id: {Model.Team2Id}");
+        }
+        base.OnParametersSet();
+    }
+
+    private async Task HandleSubmit()
+    {
+        Console.WriteLine("HandleSubmit called");
+        if (OnSubmit.HasDelegate)
+        {
+            await OnSubmit.InvokeAsync();
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        Console.WriteLine("HandleCancel called - closing modal");
+        // Fermer le modal
+        await IsVisibleChanged.InvokeAsync(false);
+        
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+}

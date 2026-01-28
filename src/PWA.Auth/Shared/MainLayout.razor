@@ -5,6 +5,11 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
 <div class="page">
     <nav class="navbar @(isWorldBetSection ? "worldbet-navbar" : "")">
         <div class="nav-brand-section">

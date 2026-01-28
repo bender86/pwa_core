@@ -7,6 +7,7 @@ using PWA.Auth;
 using PWA.Auth.Services;
 using PWA.Auth.Handlers;
 using System.Text.Json;
+using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app"); 
@@ -83,5 +84,7 @@ builder.Services.AddScoped<WorldBetApiClient>();
 builder.Services.AddScoped<ITournamentService, TournamentService>();
 builder.Services.AddScoped<IPronosticService, PronosticService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+
+builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();

@@ -5,135 +5,247 @@
 
 @namespace PWA.Auth.Components.worldbet
 
-<EditForm Model="@Model" OnValidSubmit="HandleSubmit">
-    <DataAnnotationsValidator />
-    
+<MudForm @ref="form" @bind-IsValid="@isValid">
     @if (!string.IsNullOrEmpty(ErrorMessage))
     {
-        <div class="alert alert-danger">
-            @ErrorMessage
-        </div>
+        <MudAlert Severity="Severity.Error" Class="mb-4">@ErrorMessage</MudAlert>
     }
     
-    <div class="row g-3">
-        <div class="col-md-6">
-            <label class="form-label">Phase *</label>
-            <select @bind="Model.PhaseId" class="form-select" required disabled="@IsLoading">
-                <option value="0">Sélectionnez une phase</option>
+    <MudGrid Spacing="3">
+        <!-- Phase & Group -->
+        <MudItem xs="12" md="6">
+            <MudSelect T="int" 
+                       @bind-Value="Model.PhaseId"
+                       Label="Phase" 
+                       Variant="Variant.Outlined"
+                       Required="true"
+                       RequiredError="La phase est requise"
+                       Disabled="@IsLoading"
+                       AdornmentIcon="@Icons.Material.Filled.Stadium"
+                       AdornmentColor="Color.Primary">
                 @foreach (var phase in Phases)
                 {
-                    <option value="@phase.PhaseId">@phase.Name</option>
+                    <MudSelectItem Value="@phase.PhaseId">@phase.Name</MudSelectItem>
                 }
-            </select>
-        </div>
+            </MudSelect>
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">Groupe (optionnel)</label>
-            <select @bind="Model.GroupLetter" class="form-select" disabled="@IsLoading">
-                <option value="">Aucun</option>
+        <MudItem xs="12" md="6">
+            <MudSelect T="string" 
+                       @bind-Value="Model.GroupLetter"
+                       Label="Groupe (optionnel)" 
+                       Variant="Variant.Outlined"
+                       Clearable="true"
+                       Disabled="@IsLoading"
+                       AdornmentIcon="@Icons.Material.Filled.Groups"
+                       AdornmentColor="Color.Secondary">
+                <MudSelectItem Value="@((string)null!)">Aucun groupe</MudSelectItem>
                 @for (char c = 'A'; c <= 'H'; c++)
                 {
-                    <option value="@c.ToString()">Groupe @c</option>
+                    var groupLetter = c.ToString();
+                    <MudSelectItem Value="@groupLetter">Groupe @groupLetter</MudSelectItem>
                 }
-            </select>
-        </div>
+            </MudSelect>
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">Équipe 1 *</label>
-            <select @bind="Model.Team1Id" class="form-select" required disabled="@IsLoading">
-                <option value="0">Sélectionnez une équipe</option>
-                @foreach (var team in Teams)
+        <!-- Teams -->
+        <MudItem xs="12" md="6">
+            <MudSelect T="int" 
+                       @bind-Value="Model.Team1Id"
+                       Label="Équipe 1" 
+                       Variant="Variant.Outlined"
+                       Required="true"
+                       RequiredError="L'équipe 1 est requise"
+                       Disabled="@IsLoading"
+                       AdornmentIcon="@Icons.Material.Filled.Sports"
+                       AdornmentColor="Color.Primary">
+                @foreach (var team in Teams.Where(t => t.TeamId != Model.Team2Id))
                 {
-                    <option value="@team.TeamId">@team.Name</option>
+                    <MudSelectItem Value="@team.TeamId">@team.Name</MudSelectItem>
                 }
-            </select>
-        </div>
+            </MudSelect>
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">Équipe 2 *</label>
-            <select @bind="Model.Team2Id" class="form-select" required disabled="@IsLoading">
-                <option value="0">Sélectionnez une équipe</option>
-                @foreach (var team in Teams)
+        <MudItem xs="12" md="6">
+            <MudSelect T="int" 
+                       @bind-Value="Model.Team2Id"
+                       Label="Équipe 2" 
+                       Variant="Variant.Outlined"
+                       Required="true"
+                       RequiredError="L'équipe 2 est requise"
+                       Disabled="@IsLoading"
+                       AdornmentIcon="@Icons.Material.Filled.Sports"
+                       AdornmentColor="Color.Primary">
+                @foreach (var team in Teams.Where(t => t.TeamId != Model.Team1Id))
                 {
-                    <option value="@team.TeamId">@team.Name</option>
+                    <MudSelectItem Value="@team.TeamId">@team.Name</MudSelectItem>
                 }
-            </select>
-        </div>
+            </MudSelect>
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">Date et heure *</label>
-            <input type="datetime-local" 
-                   @bind="Model.ScheduledDate" 
-                   @bind:after="UpdateLockDate"
-                   class="form-control" 
-                   required 
-                   disabled="@IsLoading" />
-        </div>
+        <!-- Date & Venue -->
+        <MudItem xs="12" md="6">
+            <MudDatePicker @bind-Date="scheduledDate"
+                           Label="Date du match"
+                           Variant="Variant.Outlined"
+                           Required="true"
+                           RequiredError="La date est requise"
+                           Disabled="@IsLoading"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.CalendarMonth"
+                           AdornmentColor="Color.Primary"
+                           DateFormat="dd/MM/yyyy"
+                           @bind-Date:after="UpdateScheduledDate" />
+            <MudTimePicker @bind-Time="scheduledTime"
+                           Label="Heure du match"
+                           Variant="Variant.Outlined"
+                           Required="true"
+                           Disabled="@IsLoading"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.AccessTime"
+                           AdornmentColor="Color.Primary"
+                           AmPm="false"
+                           @bind-Time:after="UpdateScheduledDate"
+                           Class="mt-2" />
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">Lieu</label>
-            <input type="text" 
-                   @bind="Model.Venue" 
-                   class="form-control" 
-                   placeholder="Ex: Stade de France, Paris" 
-                   disabled="@IsLoading" />
-            <small class="text-muted">Nom du stade où se joue le match</small>
-        </div>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" 
+                          @bind-Value="Model.Venue"
+                          Label="Lieu"
+                          Variant="Variant.Outlined"
+                          Placeholder="Ex: Stade de France, Paris"
+                          Disabled="@IsLoading"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.LocationOn"
+                          AdornmentColor="Color.Secondary"
+                          HelperText="Nom du stade où se joue le match" />
+        </MudItem>
         
-        <div class="col-md-4">
-            <label class="form-label">Numéro du match</label>
-            <input type="number" 
-                   @bind="Model.MatchNumber" 
-                   class="form-control" 
-                   placeholder="Ex: 1, 2, 3..." 
-                   disabled="@IsLoading" />
-            <small class="text-muted">Numéro séquentiel du match</small>
-        </div>
+        <!-- Match Number -->
+        <MudItem xs="12" md="4">
+            <MudNumericField T="int" 
+                             @bind-Value="Model.MatchNumber"
+                             Label="Numéro du match"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Placeholder="1, 2, 3..."
+                             Disabled="@IsLoading"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.Numbers"
+                             HelperText="Numéro séquentiel du match (0 = auto)" />
+        </MudItem>
         
-        <div class="col-md-4">
-            <label class="form-label">Score Équipe 1</label>
-            <input type="number" 
-                   @bind="Model.ScoreTeam1" 
-                   class="form-control" 
-                   min="0" 
-                   disabled="@IsLoading" />
-            <small class="text-muted">Laisser vide si pas encore joue</small>
-        </div>
+        <!-- Scores -->
+        <MudItem xs="12" md="4">
+            <MudNumericField T="int?" 
+                             @bind-Value="Model.ScoreTeam1"
+                             Label="Score Équipe 1"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Max="20"
+                             Disabled="@IsLoading"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.SportsScore"
+                             HelperText="Laisser vide si pas encore joué" />
+        </MudItem>
         
-        <div class="col-md-4">
-            <label class="form-label">Score Équipe 2</label>
-            <input type="number" 
-                   @bind="Model.ScoreTeam2" 
-                   class="form-control" 
-                   min="0" 
-                   disabled="@IsLoading" />
-            <small class="text-muted">Laisser vide si pas encore joue</small>
-        </div>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="int?" 
+                             @bind-Value="Model.ScoreTeam2"
+                             Label="Score Équipe 2"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Max="20"
+                             Disabled="@IsLoading"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.SportsScore"
+                             HelperText="Laisser vide si pas encore joué" />
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">Statut</label>
-            <select @bind="Model.Status" class="form-select" disabled="@IsLoading">
-                <option value="@MatchStatus.Scheduled">Programmé</option>
-                <option value="@MatchStatus.Live">En cours</option>
-                <option value="@MatchStatus.Finished">Terminé</option>
-                <option value="@MatchStatus.Postponed">Reporté</option>
-            </select>
-        </div>
+        <!-- Status -->
+        <MudItem xs="12" md="6">
+            <MudSelect T="MatchStatus" 
+                       @bind-Value="Model.Status"
+                       Label="Statut" 
+                       Variant="Variant.Outlined"
+                       Disabled="@IsLoading"
+                       AdornmentIcon="@Icons.Material.Filled.Flag"
+                       AdornmentColor="@GetStatusColor(Model.Status)">
+                <MudSelectItem Value="@MatchStatus.Scheduled">
+                    <div class="d-flex align-items-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        Programmé
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@MatchStatus.Live">
+                    <div class="d-flex align-items-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" />
+                        En cours
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@MatchStatus.Finished">
+                    <div class="d-flex align-items-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Primary" />
+                        Terminé
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem Value="@MatchStatus.Postponed">
+                    <div class="d-flex align-items-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Small" Color="Color.Warning" />
+                        Reporté
+                    </div>
+                </MudSelectItem>
+            </MudSelect>
+        </MudItem>
         
-        <div class="col-md-6">
-            <label class="form-label">
-                Verrouillage des pronostics
-                <i class="bi bi-info-circle text-muted" 
-                title="Date limite pour placer un pronostic"></i>
-            </label>
-            <input type="datetime-local" 
-                @bind="Model.LockPronosticsAt" 
-                class="form-control" 
-                disabled="@IsLoading" />
-            <small class="text-muted">Automatiquement défini à 5 min avant le match</small>
-        </div>
-    </div>
-</EditForm>
+        <!-- Lock Pronostics -->
+        <MudItem xs="12" md="6">
+            <MudDatePicker @bind-Date="lockDate"
+                           Label="Date de verrouillage"
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.Lock"
+                           AdornmentColor="Color.Warning"
+                           DateFormat="dd/MM/yyyy"
+                           @bind-Date:after="UpdateLockDateTime" />
+            <MudTimePicker @bind-Time="lockTime"
+                           Label="Heure de verrouillage"
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.Lock"
+                           AdornmentColor="Color.Warning"
+                           AmPm="false"
+                           @bind-Time:after="UpdateLockDateTime"
+                           Class="mt-2">
+                <HelperContent>
+                    <MudText Typo="Typo.caption" Color="Color.Warning">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                        Automatiquement défini à 5 min avant le match
+                    </MudText>
+                </HelperContent>
+            </MudTimePicker>
+        </MudItem>
+        
+        <!-- Submit Button -->
+        <MudItem xs="12" Class="d-flex justify-content-end gap-2">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Save"
+                       Disabled="@(!isValid || IsLoading)"
+                       OnClick="@HandleSubmit"
+                       Size="Size.Large">
+                @if (IsLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                }
+                Enregistrer
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudForm>
 
 @code {
     [Parameter] public CreateMatchRequest Model { get; set; } = new();
@@ -143,14 +255,91 @@
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public EventCallback OnSubmit { get; set; }
 
+    private MudForm? form;
+    private bool isValid;
+
+    // Date/Time helpers for MudBlazor pickers
+    private DateTime? scheduledDate;
+    private TimeSpan? scheduledTime;
+    private DateTime? lockDate;
+    private TimeSpan? lockTime;
+
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine("MatchForm - OnParametersSet called");
+        Console.WriteLine($"  Model: {Model != null}");
+        Console.WriteLine($"  Teams: {Teams?.Count ?? 0} items");
+        Console.WriteLine($"  Phases: {Phases?.Count ?? 0} items");
+        
+        // Ensure dates are valid when model is updated
+        if (Model != null && Model.ScheduledDate == DateTime.MinValue)
+        {
+            Model.ScheduledDate = DateTime.Now.AddDays(1);
+        }
+        if (Model != null && Model.LockPronosticsAt == DateTime.MinValue)
+        {
+            Model.LockPronosticsAt = Model.ScheduledDate.AddMinutes(-5);
+        }
+
+        // Initialize date/time pickers from Model
+        if (Model != null)
+        {
+            scheduledDate = Model.ScheduledDate.Date;
+            scheduledTime = Model.ScheduledDate.TimeOfDay;
+            lockDate = Model.LockPronosticsAt.Date;
+            lockTime = Model.LockPronosticsAt.TimeOfDay;
+        }
+    }
+
     private async Task HandleSubmit()
     {
-        await OnSubmit.InvokeAsync();
+        if (form != null)
+        {
+            await form.Validate();
+            if (isValid)
+            {
+                await OnSubmit.InvokeAsync();
+            }
+        }
+    }
+
+    private void UpdateScheduledDate()
+    {
+        if (scheduledDate.HasValue && scheduledTime.HasValue)
+        {
+            Model.ScheduledDate = scheduledDate.Value.Date + scheduledTime.Value;
+            UpdateLockDate();
+            Console.WriteLine($"UpdateScheduledDate: {Model.ScheduledDate}");
+        }
+    }
+
+    private void UpdateLockDateTime()
+    {
+        if (lockDate.HasValue && lockTime.HasValue)
+        {
+            Model.LockPronosticsAt = lockDate.Value.Date + lockTime.Value;
+            Console.WriteLine($"UpdateLockDateTime: {Model.LockPronosticsAt}");
+        }
     }
 
     private void UpdateLockDate()
     {
-        // Automatically set lock date to 5 minutes before match
-        Model.LockPronosticsAt = Model.ScheduledDate.AddMinutes(-5);
+        // Only update if ScheduledDate is valid (not default/min value)
+        if (Model.ScheduledDate > DateTime.MinValue && Model.ScheduledDate < DateTime.MaxValue.AddDays(-1))
+        {
+            Model.LockPronosticsAt = Model.ScheduledDate.AddMinutes(-5);
+            lockDate = Model.LockPronosticsAt.Date;
+            lockTime = Model.LockPronosticsAt.TimeOfDay;
+            Console.WriteLine($"UpdateLockDate: ScheduledDate={Model.ScheduledDate}, LockPronosticsAt={Model.LockPronosticsAt}");
+        }
     }
+
+    private Color GetStatusColor(MatchStatus status) => status switch
+    {
+        MatchStatus.Scheduled => Color.Default,
+        MatchStatus.Live => Color.Success,
+        MatchStatus.Finished => Color.Primary,
+        MatchStatus.Postponed => Color.Warning,
+        _ => Color.Default
+    };
 }
