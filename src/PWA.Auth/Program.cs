@@ -81,6 +81,7 @@ builder.Services.AddScoped<IApplicationConfigService, ApplicationConfigService>(
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 //worldbet
 builder.Services.AddScoped<WorldBetApiClient>();
+builder.Services.AddScoped<IAdminService,AdminService>();
 builder.Services.AddScoped<ITournamentService, TournamentService>();
 builder.Services.AddScoped<IPronosticService, PronosticService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();

@@ -1,0 +1,361 @@
+@page "/worldbet/player/{PlayerId:int}"
+@using PWA.Auth.Pages.WorldBet.Shared
+@using dto.worldbet.Models
+@using dto.worldbet.Enums
+@layout WorldBetLayout
+@inject IPronosticService PronosticService
+@inject ILeaderboardService LeaderboardService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Pronostics du joueur</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" 
+               Variant="Variant.Text" 
+               Color="Color.Primary"
+               OnClick="@(() => Navigation.NavigateTo("/worldbet/leaderboard"))"
+               Class="mb-3">
+        Retour au classement
+    </MudButton>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else if (playerInfo != null)
+    {
+        <!-- Player Header Card -->
+        <MudPaper Class="pa-4 mb-4" Elevation="3">
+            <MudGrid>
+                <MudItem xs="12" sm="4" Class="d-flex align-items-center justify-center">
+                    <div class="text-center">
+                        <MudAvatar Size="Size.Large" 
+                                  Color="Color.Primary" 
+                                  Style="width: 100px; height: 100px; font-size: 2rem; margin: 0 auto;">
+                            @GetInitials(playerInfo.DisplayName)
+                        </MudAvatar>
+                        <MudText Typo="Typo.h5" Class="mt-3">@playerInfo.DisplayName</MudText>
+                        <MudChip T="string" Icon="@Icons.Material.Filled.EmojiEvents" Color="@GetRankColor(playerInfo.Rank)">
+                            Rang #@playerInfo.Rank
+                        </MudChip>
+                    </div>
+                </MudItem>
+                <MudItem xs="12" sm="8">
+                    <MudGrid Spacing="3">
+                        <MudItem xs="6" md="3">
+                            <MudPaper Class="pa-3 text-center" Outlined="true">
+                                <MudText Typo="Typo.h4" Color="Color.Primary">@playerInfo.TotalPoints</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Points Totaux</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" md="3">
+                            <MudPaper Class="pa-3 text-center" Outlined="true">
+                                <MudText Typo="Typo.h4" Color="Color.Info">@playerInfo.PronosticsCount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Pronostics</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" md="3">
+                            <MudPaper Class="pa-3 text-center" Outlined="true">
+                                <MudText Typo="Typo.h4" Color="Color.Success">@playerInfo.CorrectScores</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Scores Exacts</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" md="3">
+                            <MudPaper Class="pa-3 text-center" Outlined="true">
+                                <MudText Typo="Typo.h4" Color="Color.Warning">@playerInfo.CorrectWinners</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Bons Vainqueurs</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Pronostics Table -->
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                Historique des Pronostics 
+                <MudChip T="string" Size="Size.Small">
+                    @finishedPronostics.Count matches terminés
+                </MudChip>
+            </MudText>
+
+            @if (!finishedPronostics.Any())
+            {
+                <MudAlert Severity="Severity.Info">
+                    Aucun match terminé pour le moment.
+                </MudAlert>
+            }
+            else
+            {
+                <MudDataGrid T="PronosticDto" 
+                            Items="@finishedPronostics" 
+                            Dense="true" 
+                            Hover="true"
+                            Bordered="true" 
+                            Striped="true"
+                            SortMode="SortMode.Multiple">
+                    
+                    <Columns>
+                        <!-- Date -->
+                        <TemplateColumn Title="Date" Sortable="true" SortBy="@(x => x.Match?.ScheduledDate)">
+                            <CellTemplate>
+                                <MudText Typo="Typo.body2">
+                                    @context.Item.Match?.ScheduledDate.ToString("dd/MM/yyyy")
+                                </MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+
+                        <!-- Match -->
+                        <TemplateColumn Title="Match" Sortable="false">
+                            <CellTemplate>
+                                <div class="d-flex flex-column">
+                                    <MudText Typo="Typo.body2">
+                                        @context.Item.Match?.Team1Name
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">vs</MudText>
+                                    <MudText Typo="Typo.body2">
+                                        @context.Item.Match?.Team2Name
+                                    </MudText>
+                                </div>
+                            </CellTemplate>
+                        </TemplateColumn>
+
+                        <!-- Score Réel -->
+                        <TemplateColumn Title="Score Réel" Sortable="false">
+                            <CellTemplate>
+                                @if (context.Item.Match?.ScoreTeam1.HasValue == true && context.Item.Match?.ScoreTeam2.HasValue == true)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                        @context.Item.Match.ScoreTeam1 - @context.Item.Match.ScoreTeam2
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Tertiary">-</MudText>
+                                }
+                            </CellTemplate>
+                        </TemplateColumn>
+
+                        <!-- Pronostic -->
+                        <TemplateColumn Title="Pronostic" Sortable="false">
+                            <CellTemplate>
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                    @context.Item.PredictedScoreTeam1 - @context.Item.PredictedScoreTeam2
+                                </MudChip>
+                            </CellTemplate>
+                        </TemplateColumn>
+
+                        <!-- Points -->
+                        <TemplateColumn Title="Points" Sortable="true" SortBy="@(x => x.PointsEarned)">
+                            <CellTemplate>
+                                <MudChip T="string" 
+                                        Color="@GetPointsColor(context.Item.PointsEarned)" 
+                                        Size="Size.Small"
+                                        Icon="@GetPointsIcon(context.Item.PointsEarned)">
+                                    @context.Item.PointsEarned pts
+                                </MudChip>
+                            </CellTemplate>
+                        </TemplateColumn>
+
+                        <!-- Détail -->
+                        <TemplateColumn Title="Résultat" Sortable="false">
+                            <CellTemplate>
+                                <MudText Typo="Typo.body2" Color="@GetResultColor(context.Item.PointsEarned)">
+                                    @GetResultText(context.Item.PointsEarned)
+                                </MudText>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+
+                    <PagerContent>
+                        <MudDataGridPager T="PronosticDto" />
+                    </PagerContent>
+                </MudDataGrid>
+
+                <!-- Statistics Summary -->
+                <MudPaper Class="pa-4 mt-4" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="mb-3">Statistiques Détaillées</MudText>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Taux de réussite</MudText>
+                            <MudProgressLinear Color="@GetSuccessRateColor()" 
+                                        Value="@((double)GetSuccessRate())" 
+                                        Size="Size.Large" 
+                                        Rounded="true">
+                            <MudText Typo="Typo.body2">@GetSuccessRate().ToString("F1")%</MudText>
+                        </MudProgressLinear>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Moyenne par match</MudText>
+                            <MudText Typo="Typo.h6">@GetAveragePoints().ToString("F2") pts</MudText>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Meilleure série</MudText>
+                            <MudText Typo="Typo.h6">@GetBestStreak() matchs</MudText>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Matchs sans points</MudText>
+                            <MudText Typo="Typo.h6">@GetZeroPointsCount()</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int PlayerId { get; set; }
+
+    private LeaderboardDto? playerInfo;
+    private List<PronosticDto> allPronostics = new();
+    private List<PronosticDto> finishedPronostics = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlayerData();
+    }
+
+    private async Task LoadPlayerData()
+    {
+        isLoading = true;
+        try
+        {
+            var leaderboardTask = LeaderboardService.GetLeaderboardAsync();
+            var pronosticsTask = PronosticService.GetMyPronosticsPlayerAsync(PlayerId);
+
+            await Task.WhenAll(leaderboardTask, pronosticsTask);
+
+            var leaderboard = await leaderboardTask;
+            playerInfo = leaderboard.FirstOrDefault(p => p.PlayerId == PlayerId);
+
+            allPronostics = await pronosticsTask;
+            finishedPronostics = allPronostics
+                .Where(p => p.Match?.Status == MatchStatus.Finished)
+                .OrderByDescending(p => p.Match?.ScheduledDate)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement : {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetInitials(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return "??";
+
+        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        
+        return displayName.Length >= 2 
+            ? displayName.Substring(0, 2).ToUpper() 
+            : displayName.ToUpper();
+    }
+
+    private Color GetRankColor(int rank) => rank switch
+    {
+        1 => Color.Warning,
+        2 => Color.Default,
+        3 => Color.Default,
+        _ => Color.Default
+    };
+
+    private Color GetPointsColor(int points) => points switch
+    {
+        3 => Color.Success,
+        1 => Color.Info,
+        0 => Color.Warning,
+        _ => Color.Default
+    };
+
+    private string GetPointsIcon(int points) => points switch
+    {
+        3 => Icons.Material.Filled.Star,
+        1 => Icons.Material.Filled.Check,
+        0 => Icons.Material.Filled.Done,
+        _ => Icons.Material.Filled.Close
+    };
+
+    private Color GetResultColor(int points) => points switch
+    {
+        3 => Color.Success,
+        1 => Color.Info,
+        0 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private string GetResultText(int points) => points switch
+    {
+        3 => "Score exact !",
+        1 => "Bonne différence",
+        0 => "Bon vainqueur",
+        _ => "Raté"
+    };
+
+    private decimal GetSuccessRate()
+    {
+        if (!finishedPronostics.Any())
+            return 0;
+
+        var successCount = finishedPronostics.Count(p => p.PointsEarned > 0);
+        return Math.Round((decimal)successCount / finishedPronostics.Count * 100, 1);
+    }
+
+    private Color GetSuccessRateColor()
+    {
+        var rate = GetSuccessRate();
+        return rate switch
+        {
+            >= 75 => Color.Success,
+            >= 50 => Color.Info,
+            >= 25 => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    private decimal GetAveragePoints()
+    {
+        if (!finishedPronostics.Any())
+            return 0;
+
+        return Math.Round((decimal)finishedPronostics.Sum(p => p.PointsEarned) / finishedPronostics.Count, 2);
+    }
+
+    private int GetBestStreak()
+    {
+        int maxStreak = 0;
+        int currentStreak = 0;
+
+        foreach (var prono in finishedPronostics.OrderBy(p => p.Match?.ScheduledDate))
+        {
+            if (prono.PointsEarned > 0)
+            {
+                currentStreak++;
+                maxStreak = Math.Max(maxStreak, currentStreak);
+            }
+            else
+            {
+                currentStreak = 0;
+            }
+        }
+
+        return maxStreak;
+    }
+
+    private int GetZeroPointsCount()
+    {
+        return finishedPronostics.Count(p => p.PointsEarned == 0);
+    }
+}

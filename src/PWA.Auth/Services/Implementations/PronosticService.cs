@@ -26,6 +26,12 @@ public class PronosticService : IPronosticService
             "pronostic/my-pronostics") ?? new();
     }
 
+    public async Task<List<PronosticDto>> GetMyPronosticsPlayerAsync(int playerId)
+    {
+        return await _apiClient.GetFromJsonAsync<List<PronosticDto>>(
+            $"pronostic/pronostics/player/{playerId}") ?? new();
+    }
+
     public async Task<PronosticDto?> GetMyPronosticForMatchAsync(int matchId)
     {
         return await _apiClient.GetFromJsonAsync<PronosticDto>(

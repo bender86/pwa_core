@@ -1,0 +1,304 @@
+@* Components/worldbet/MatchPronosticsDialog/MatchPronosticsDialog.razor *@
+@using dto.worldbet.Models
+@using MudBlazor
+@namespace PWA.Auth.Components.worldbet
+@inject IPronosticService PronosticService
+@inject ILogger<MatchPronosticsDialog> Logger
+
+<MudDialog>
+    <DialogContent>
+        <div class="pa-4">
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center py-5">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                </div>
+            }
+            else if (matchPronostics != null)
+            {
+                <!-- Match Info -->
+                <MudPaper Elevation="0" Class="match-info mb-4 pa-4">
+                    <MudText Typo="Typo.h5" Class="mb-2 white-text">
+                        <strong>@matchPronostics.Match.Team1Name</strong>
+                        @if (matchPronostics.Match.ScoreTeam1.HasValue && matchPronostics.Match.ScoreTeam2.HasValue)
+                        {
+                            <span class="mx-3">@matchPronostics.Match.ScoreTeam1 - @matchPronostics.Match.ScoreTeam2</span>
+                        }
+                        else
+                        {
+                            <span class="mx-3">vs</span>
+                        }
+                        <strong>@matchPronostics.Match.Team2Name</strong>
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="white-text">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                        @matchPronostics.Match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="white-text">
+                        <MudIcon Icon="@Icons.Material.Filled.Stadium" Size="Size.Small" />
+                        @matchPronostics.Match.PhaseName
+                        @if (!string.IsNullOrEmpty(matchPronostics.Match.GroupLetter))
+                        {
+                            <span> - Groupe @matchPronostics.Match.GroupLetter</span>
+                        }
+                    </MudText>
+                </MudPaper>
+
+                <MudDivider Class="my-4" />
+
+                <!-- Pronostics avec MudDataGrid -->
+                @if (matchPronostics.Pronostics.Any())
+                {
+                    <MudText Typo="Typo.h6" Class="mb-3">
+                        Pronostics des joueurs (@matchPronostics.Pronostics.Count)
+                    </MudText>
+
+                    <!-- Desktop Version -->
+                    <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                        <MudDataGrid T="PronosticWithPlayerDto" 
+                                     Items="@matchPronostics.Pronostics" 
+                                     Dense="true"
+                                     Hover="true"
+                                     ReadOnly="true"
+                                     Striped="true"
+                                     SortMode="SortMode.Single"
+                                     Filterable="false"
+                                     Hideable="false"
+                                     ShowMenuIcon="false"
+                                     ColumnResizeMode="ResizeMode.None"
+                                     Height="auto">
+                            <Columns>
+                                <PropertyColumn Property="x => x.PlayerDisplayName" 
+                                               Title="Joueur"
+                                               Sortable="true">
+                                    <CellTemplate>
+                                        <MudText Typo="Typo.body2">
+                                            <strong>@context.Item.PlayerDisplayName</strong>
+                                        </MudText>
+                                    </CellTemplate>
+                                </PropertyColumn>
+                                
+                                <TemplateColumn Title="Pronostic" 
+                                               CellClass="text-center"
+                                               HeaderClass="text-center">
+                                    <CellTemplate>
+                                        <MudChip T="string" 
+                                                 Size="Size.Small" 
+                                                 Variant="Variant.Outlined">
+                                            @($"{context.Item.PredictedScoreTeam1} - {context.Item.PredictedScoreTeam2}")
+                                        </MudChip>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                
+                                <PropertyColumn Property="x => x.PointsEarned" 
+                                               Title="Points"
+                                               CellClass="text-center"
+                                               HeaderClass="text-center"
+                                               Sortable="true"
+                                               InitialDirection="SortDirection.Descending">
+                                    <CellTemplate>
+                                        <MudChip T="string" 
+                                                 Color="@GetPointsColor(context.Item.PointsEarned)" 
+                                                 Size="Size.Small">
+                                            @($"{context.Item.PointsEarned} pts")
+                                        </MudChip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+                                
+                                <TemplateColumn Title="Résultat" 
+                                               CellClass="text-center"
+                                               HeaderClass="text-center">
+                                    <CellTemplate>
+                                        @if (context.Item.IsCorrectScore)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
+                                                     Color="Color.Success" 
+                                                     Title="Score exact !" 
+                                                     Size="Size.Medium" />
+                                        }
+                                        else if (context.Item.IsCorrectWinner)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                                     Color="Color.Info" 
+                                                     Title="Bon résultat" 
+                                                     Size="Size.Medium" />
+                                        }
+                                        else if (context.Item.PointsEarned > 0)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" 
+                                                     Color="Color.Warning" 
+                                                     Title="Bonne différence" 
+                                                     Size="Size.Medium" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Close" 
+                                                     Color="Color.Default" 
+                                                     Title="Pas de points" 
+                                                     Size="Size.Medium" />
+                                        }
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                        </MudDataGrid>
+                    </MudHidden>
+
+                    <!-- Mobile Version - Cards -->
+                    <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                        <MudStack Spacing="2">
+                            @foreach (var prono in matchPronostics.Pronostics.OrderByDescending(p => p.PointsEarned))
+                            {
+                                <MudCard Elevation="2">
+                                    <MudCardContent Class="py-2 px-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <MudText Typo="Typo.body1">
+                                                <strong>@prono.PlayerDisplayName</strong>
+                                            </MudText>
+                                            <MudChip T="string" 
+                                                     Color="@GetPointsColor(prono.PointsEarned)" 
+                                                     Size="Size.Small">
+                                                @($"{prono.PointsEarned} pts")
+                                            </MudChip>
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <MudChip T="string" 
+                                                     Size="Size.Small" 
+                                                     Variant="Variant.Outlined">
+                                                @($"{prono.PredictedScoreTeam1} - {prono.PredictedScoreTeam2}")
+                                            </MudChip>
+                                            
+                                            @if (prono.IsCorrectScore)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
+                                                         Color="Color.Success" 
+                                                         Title="Score exact !" />
+                                            }
+                                            else if (prono.IsCorrectWinner)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                                         Color="Color.Info" 
+                                                         Title="Bon résultat" />
+                                            }
+                                            else if (prono.PointsEarned > 0)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" 
+                                                         Color="Color.Warning" 
+                                                         Title="Bonne différence" />
+                                            }
+                                        </div>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                        </MudStack>
+                    </MudHidden>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Class="me-2" />
+                        Aucun pronostic n'a été enregistré pour ce match
+                    </MudAlert>
+                }
+            }
+            else if (errorMessage != null)
+            {
+                <MudAlert Severity="Severity.Error">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Class="me-2" />
+                    @errorMessage
+                </MudAlert>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" 
+                   Color="Color.Primary" 
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Close">
+            Fermer
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // ✅ PAS DE MudDialogInstance - on utilise juste le paramètre
+    [Parameter]
+    public int MatchId { get; set; }
+
+    private MatchPronosticsDto? matchPronostics;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPronostics();
+    }
+
+    private async Task LoadPronostics()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            
+            Logger.LogInformation("Loading pronostics for match {MatchId}", MatchId);
+            matchPronostics = await PronosticService.GetMatchPronosticsAsync(MatchId);
+            
+            Logger.LogInformation("Loaded {Count} pronostics", matchPronostics.Pronostics.Count);
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+            Logger.LogWarning(ex, "Cannot display pronostics yet for match {MatchId}", MatchId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement des pronostics";
+            Logger.LogError(ex, "Error loading match pronostics for match {MatchId}", MatchId);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // ✅ Le dialog se ferme automatiquement quand on clique sur le bouton
+    private void Close()
+    {
+        // Le DialogService gère la fermeture automatiquement
+        // On n'a rien besoin de faire
+    }
+
+    private Color GetPointsColor(int points)
+    {
+        return points switch
+        {
+            3 => Color.Success,      // Score exact
+            1 => Color.Info,         // Bonne différence
+            0 => Color.Warning,      // Bon résultat
+            _ => Color.Default       // Aucun point
+        };
+    }
+}
+
+<style>
+    .match-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        border-radius: 8px;
+    }
+    
+    .white-text {
+        color: white !important;
+    }
+    
+    .text-center {
+        text-align: center !important;
+    }
+    
+    /* Style pour les colonnes centrées dans MudDataGrid */
+    .mud-table-cell.text-center,
+    .mud-table-head-cell.text-center {
+        text-align: center !important;
+    }
+</style>

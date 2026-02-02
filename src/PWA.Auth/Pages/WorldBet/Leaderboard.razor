@@ -4,252 +4,320 @@
 @layout WorldBetLayout
 @inject ILeaderboardService LeaderboardService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 @attribute [Authorize]
 
 <PageTitle>Classement</PageTitle>
 
-<div class="leaderboard-page">
-    <div class="page-header">
-        <div>
-            <h3>🏆 Classement Général</h3>
-            <p class="text-muted">Les meilleurs pronostiqueurs du tournoi</p>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle"></i> @errorMessage
-            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-        </div>
-    }
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">🏆 Classement Général</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+        Les meilleurs pronostiqueurs du tournoi
+    </MudText>
 
     @if (isLoading)
     {
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2">Chargement du classement...</p>
-        </div>
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
     }
     else if (!leaderboard.Any())
     {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Aucun joueur n'a encore marqué de points.
-        </div>
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Aucun joueur n'a encore marqué de points.
+        </MudAlert>
     }
     else
     {
         <!-- Podium (Top 3) -->
         @if (leaderboard.Count >= 3)
         {
-            <div class="podium-container">
-                <div class="podium">
+            <MudPaper Class="pa-6 mb-6" Elevation="3" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <MudGrid Justify="Justify.Center" Spacing="3">
                     <!-- 2nd Place -->
-                    <div class="podium-place second">
-                        <div class="podium-medal">
-                            <i class="bi bi-award-fill"></i>
-                        </div>
-                        <div class="podium-player">
-                            <div class="player-avatar">
-                                <span>@GetInitials(leaderboard[1].DisplayName)</span>
-                            </div>
-                            <div class="player-name">@leaderboard[1].DisplayName</div>
-                            <div class="player-stats">
-                                <div class="stat">
-                                    <i class="bi bi-trophy-fill"></i> @leaderboard[1].TotalPoints pts
-                                </div>
-                                <div class="stat">
-                                    <i class="bi bi-bullseye"></i> @leaderboard[1].CorrectScores exacts
-                                </div>
-                            </div>
-                        </div>
-                        <div class="podium-rank">2</div>
-                    </div>
+                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
+                                 Size="Size.Large" 
+                                 Style="color: #c0c0c0; font-size: 3rem;" 
+                                 Class="mb-2" />
+                        <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px;">
+                            <MudAvatar Size="Size.Large" 
+                                      Color="Color.Secondary" 
+                                      Style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
+                                @GetInitials(leaderboard[1].DisplayName)
+                            </MudAvatar>
+                            <MudText Typo="Typo.h6" Class="mt-3 mb-2">
+                                <MudLink Href="@GetPlayerLink(leaderboard[1].PlayerId)" Color="Color.Dark">
+                                    @leaderboard[1].DisplayName
+                                </MudLink>
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.EmojiEvents">
+                                @leaderboard[1].TotalPoints pts
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Adjust" Color="Color.Success">
+                                @leaderboard[1].CorrectScores exacts
+                            </MudChip>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mt-2 text-center" 
+                                 Style="background: #c0c0c0; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
+                            2
+                        </MudPaper>
+                    </MudItem>
 
                     <!-- 1st Place -->
-                    <div class="podium-place first">
-                        <div class="podium-crown">
-                            <i class="bi bi-gem"></i>
-                        </div>
-                        <div class="podium-medal">
-                            <i class="bi bi-award-fill"></i>
-                        </div>
-                        <div class="podium-player">
-                            <div class="player-avatar champion">
-                                <span>@GetInitials(leaderboard[0].DisplayName)</span>
-                            </div>
-                            <div class="player-name">@leaderboard[0].DisplayName</div>
-                            <div class="player-stats">
-                                <div class="stat">
-                                    <i class="bi bi-trophy-fill"></i> @leaderboard[0].TotalPoints pts
-                                </div>
-                                <div class="stat">
-                                    <i class="bi bi-bullseye"></i> @leaderboard[0].CorrectScores exacts
-                                </div>
-                            </div>
-                        </div>
-                        <div class="podium-rank">1</div>
-                    </div>
+                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center" Style="order: -1;">
+                        <MudIcon Icon="@Icons.Material.Filled.Diamond" 
+                                 Size="Size.Large" 
+                                 Style="color: #ffd700; font-size: 3rem;" 
+                                 Class="mb-2 podium-crown" />
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
+                                 Size="Size.Large" 
+                                 Style="color: #ffd700; font-size: 3rem;" 
+                                 Class="mb-2" />
+                        <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px; border: 4px solid #ffd700;">
+                            <MudAvatar Size="Size.Large" 
+                                      Color="Color.Warning" 
+                                      Style="width: 100px; height: 100px; font-size: 2rem; margin: 0 auto; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
+                                @GetInitials(leaderboard[0].DisplayName)
+                            </MudAvatar>
+                            <MudText Typo="Typo.h5" Class="mt-3 mb-2">
+                                <MudLink Href="@GetPlayerLink(leaderboard[0].PlayerId)" Color="Color.Dark">
+                                    @leaderboard[0].DisplayName
+                                </MudLink>
+                            </MudText>
+                            <MudChip T="string" Size="Size.Medium" Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning">
+                                @leaderboard[0].TotalPoints pts
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Medium" Icon="@Icons.Material.Filled.Adjust" Color="Color.Success">
+                                @leaderboard[0].CorrectScores exacts
+                            </MudChip>
+                        </MudPaper>
+                        <MudPaper Class="pa-4 mt-2 text-center" 
+                                 Style="background: #ffd700; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
+                            1
+                        </MudPaper>
+                    </MudItem>
 
                     <!-- 3rd Place -->
-                    <div class="podium-place third">
-                        <div class="podium-medal">
-                            <i class="bi bi-award-fill"></i>
-                        </div>
-                        <div class="podium-player">
-                            <div class="player-avatar">
-                                <span>@GetInitials(leaderboard[2].DisplayName)</span>
-                            </div>
-                            <div class="player-name">@leaderboard[2].DisplayName</div>
-                            <div class="player-stats">
-                                <div class="stat">
-                                    <i class="bi bi-trophy-fill"></i> @leaderboard[2].TotalPoints pts
-                                </div>
-                                <div class="stat">
-                                    <i class="bi bi-bullseye"></i> @leaderboard[2].CorrectScores exacts
-                                </div>
-                            </div>
-                        </div>
-                        <div class="podium-rank">3</div>
-                    </div>
-                </div>
-            </div>
+                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
+                                 Size="Size.Large" 
+                                 Style="color: #cd7f32; font-size: 3rem;" 
+                                 Class="mb-2" />
+                        <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px;">
+                            <MudAvatar Size="Size.Large" 
+                                      Color="Color.Default" 
+                                      Style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
+                                @GetInitials(leaderboard[2].DisplayName)
+                            </MudAvatar>
+                            <MudText Typo="Typo.h6" Class="mt-3 mb-2">
+                                <MudLink Href="@GetPlayerLink(leaderboard[2].PlayerId)" Color="Color.Dark">
+                                    @leaderboard[2].DisplayName
+                                </MudLink>
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.EmojiEvents">
+                                @leaderboard[2].TotalPoints pts
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Adjust" Color="Color.Success">
+                                @leaderboard[2].CorrectScores exacts
+                            </MudChip>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mt-2 text-center" 
+                                 Style="background: #cd7f32; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
+                            3
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
         }
 
         <!-- My Ranking Card -->
         @if (currentPlayerRanking != null)
         {
-            <div class="my-ranking-card @(currentPlayerRanking.Rank <= 3 ? "top-three" : "")">
-                <div class="ranking-header">
-                    <h5>
-                        <i class="bi bi-person-circle"></i> Votre Classement
-                    </h5>
-                </div>
-                <div class="ranking-body">
-                    <div class="rank-badge">
-                        <span class="rank-number">#{currentPlayerRanking.Rank}</span>
+            <MudPaper Class="pa-4 mb-4" 
+                     Elevation="3" 
+                     Style="@(currentPlayerRanking.Rank <= 3 ? "border: 3px solid #ffd700;" : "")">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h6" Class="mb-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Class="me-2" />
+                            Votre Classement
+                        </MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="3" Class="text-center">
+                        <MudText Typo="Typo.h3" Color="Color.Primary">
+                            #@currentPlayerRanking.Rank
+                        </MudText>
                         @if (currentPlayerRanking.Rank <= 3)
                         {
-                            <i class="bi bi-trophy-fill text-warning"></i>
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Size="Size.Large" />
                         }
-                    </div>
-                    <div class="ranking-stats">
-                        <div class="stat-item">
-                            <div class="stat-value">@currentPlayerRanking.TotalPoints</div>
-                            <div class="stat-label">Points</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">@currentPlayerRanking.PronosticsCount</div>
-                            <div class="stat-label">Pronostics</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">@currentPlayerRanking.CorrectScores</div>
-                            <div class="stat-label">Scores exacts</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value">@GetSuccessRate(currentPlayerRanking).ToString("F1")%</div>
-                            <div class="stat-label">Taux de réussite</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </MudItem>
+                    <MudItem xs="12" sm="9">
+                        <MudGrid Spacing="2">
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.h5" Color="Color.Primary">@currentPlayerRanking.TotalPoints</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Points</MudText>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.h5" Color="Color.Primary">@currentPlayerRanking.PronosticsCount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Pronostics</MudText>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.h5" Color="Color.Success">@currentPlayerRanking.CorrectScores</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Scores exacts</MudText>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.h5" Color="Color.Info">@GetSuccessRate(currentPlayerRanking).ToString("F1")%</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Taux de réussite</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
         }
 
         <!-- Full Leaderboard Table -->
-        <div class="leaderboard-table-container">
-            <h4 class="mb-3">Classement Complet</h4>
-            <div class="table-responsive">
-                <table class="table leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>Rang</th>
-                            <th>Joueur</th>
-                            <th class="text-center">Points</th>
-                            <th class="text-center d-none d-md-table-cell">Pronostics</th>
-                            <th class="text-center d-none d-md-table-cell">Scores exacts</th>
-                            <th class="text-center d-none d-lg-table-cell">Taux de réussite</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var player in leaderboard)
-                        {
-                            <tr class="@(IsCurrentPlayer(player) ? "current-player" : "") @(player.Rank <= 3 ? "top-player" : "")">
-                                <td>
-                                    <div class="rank-cell">
-                                        <span class="rank-number @GetRankClass(player.Rank)">
-                                            @if (player.Rank <= 3)
-                                            {
-                                                <i class="bi bi-trophy-fill"></i>
-                                            }
-                                            #@player.Rank
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="player-cell">
-                                        <div class="player-avatar-small">
-                                            @GetInitials(player.DisplayName)
-                                        </div>
-                                        <span class="player-name-text">
-                                            @player.DisplayName
-                                            @if (IsCurrentPlayer(player))
-                                            {
-                                                <span class="badge bg-primary ms-2">Vous</span>
-                                            }
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    <strong class="points-value">@player.TotalPoints</strong>
-                                </td>
-                                <td class="text-center d-none d-md-table-cell">
-                                    @player.PronosticsCount
-                                </td>
-                                <td class="text-center d-none d-md-table-cell">
-                                    <span class="badge bg-success">@player.CorrectScores</span>
-                                </td>
-                                <td class="text-center d-none d-lg-table-cell">
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar @GetProgressBarClass(GetSuccessRate(player))" 
-                                             role="progressbar" 
-                                             style="width: @GetSuccessRate(player)%"
-                                             aria-valuenow="@GetSuccessRate(player)" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="100">
-                                            @GetSuccessRate(player).ToString("F1")%
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h5" Class="mb-4">Classement Complet</MudText>
+            
+            <MudDataGrid T="LeaderboardDto" 
+                        Items="@leaderboard" 
+                        Dense="true" 
+                        Hover="true"
+                        Bordered="true" 
+                        Striped="true">
+                
+                <Columns>
+                    <!-- Rank -->
+                    <PropertyColumn Property="x => x.Rank" Title="Rang" Sortable="false">
+                        <CellTemplate>
+                            <div class="d-flex align-items-center gap-2">
+                                @if (context.Item.Rank <= 3)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
+                                            Color="@GetRankColor(context.Item.Rank)" 
+                                            Size="Size.Small" />
+                                }
+                                <MudChip T="string" 
+                                        Size="Size.Small" 
+                                        Color="@GetRankColor(context.Item.Rank)">
+                                    #@context.Item.Rank
+                                </MudChip>
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <!-- Player -->
+                    <TemplateColumn Title="Joueur" Sortable="false">
+                        <CellTemplate>
+                            <div class="d-flex align-items-center gap-2">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                    @GetInitials(context.Item.DisplayName)
+                                </MudAvatar>
+                                <MudLink Href="@GetPlayerLink(context.Item.PlayerId)" 
+                                        Color="Color.Dark" 
+                                        Typo="Typo.body1">
+                                    @context.Item.DisplayName
+                                </MudLink>
+                                @if (IsCurrentPlayer(context.Item))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">Vous</MudChip>
+                                }
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+
+                    <!-- Points -->
+                    <PropertyColumn Property="x => x.TotalPoints" Title="Points" Sortable="false">
+                        <CellTemplate>
+                            <MudText Typo="Typo.body1" Color="Color.Primary">
+                                <strong>@context.Item.TotalPoints</strong>
+                            </MudText>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <!-- Pronostics -->
+                    <PropertyColumn Property="x => x.PronosticsCount" 
+                                   Title="Pronostics" 
+                                   Sortable="false" 
+                                   Hideable="true" 
+                                   Hidden="@(_isSmallScreen)" />
+
+                    <!-- Correct Scores -->
+                    <PropertyColumn Property="x => x.CorrectScores" 
+                                   Title="Scores exacts" 
+                                   Sortable="false"
+                                   Hideable="true" 
+                                   Hidden="@(_isSmallScreen)">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                @context.Item.CorrectScores
+                            </MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <!-- Success Rate -->
+                    <TemplateColumn Title="Taux de réussite" 
+                                   Sortable="false"
+                                   Hideable="true" 
+                                   Hidden="@(_isSmallScreen)">
+                        <CellTemplate>
+                            <MudProgressLinear Color="@GetSuccessRateColor(context.Item)" 
+                                            Value="@((double)GetSuccessRate(context.Item))" 
+                                            Size="Size.Large" 
+                                            Rounded="true">
+                                <MudText Typo="Typo.body2">
+                                    @GetSuccessRate(context.Item).ToString("F1")%
+                                </MudText>
+                            </MudProgressLinear>
+                        </CellTemplate>
+                    </TemplateColumn>
+
+                    <!-- Actions -->
+                    <TemplateColumn Title="" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                          Size="Size.Small" 
+                                          Color="Color.Primary"
+                                          Href="@GetPlayerLink(context.Item.PlayerId)" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+
+                <PagerContent>
+                    <MudDataGridPager T="LeaderboardDto" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudPaper>
     }
-</div>
+</MudContainer>
 
 @code {
     private List<LeaderboardDto> leaderboard = new();
     private LeaderboardDto? currentPlayerRanking;
     private int currentPlayerId = 0;
-
     private bool isLoading = true;
-    private string? errorMessage;
+    private bool _isSmallScreen = false;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadLeaderboard();
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Simple check for mobile - could be improved with JS interop
+            _isSmallScreen = false; // Set based on window size if needed
+        }
+    }
+
     private async Task LoadLeaderboard()
     {
         isLoading = true;
-        errorMessage = null;
-
         try
         {
-            // Get current user's player ID
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             var userIdClaim = user.FindFirst("id")?.Value;
@@ -259,15 +327,12 @@
                 currentPlayerId = userId;
             }
 
-            // Load leaderboard
             leaderboard = await LeaderboardService.GetLeaderboardAsync();
-
-            // Find current player ranking
             currentPlayerRanking = leaderboard.FirstOrDefault(p => p.PlayerId == currentPlayerId);
         }
         catch (Exception ex)
         {
-            errorMessage = $"Erreur lors du chargement du classement : {ex.Message}";
+            Snackbar.Add($"Erreur lors du chargement : {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -289,28 +354,31 @@
             : displayName.ToUpper();
     }
 
-    private string GetRankClass(int rank) => rank switch
+    private Color GetRankColor(int rank) => rank switch
     {
-        1 => "rank-gold",
-        2 => "rank-silver",
-        3 => "rank-bronze",
-        _ => ""
+        1 => Color.Warning,
+        2 => Color.Default,
+        3 => Color.Default,
+        _ => Color.Default
     };
 
-    private string GetProgressBarClass(decimal successRate) => successRate switch
+    private Color GetSuccessRateColor(LeaderboardDto player)
     {
-        >= 75 => "bg-success",
-        >= 50 => "bg-info",
-        >= 25 => "bg-warning",
-        _ => "bg-danger"
-    };
+        var rate = GetSuccessRate(player);
+        return rate switch
+        {
+            >= 75 => Color.Success,
+            >= 50 => Color.Info,
+            >= 25 => Color.Warning,
+            _ => Color.Error
+        };
+    }
 
     private decimal GetSuccessRate(LeaderboardDto player)
     {
         if (player.PronosticsCount == 0)
             return 0;
 
-        // Calculate success rate: (correct scores + correct winners) / total pronostics * 100
         return Math.Round((decimal)(player.CorrectScores + player.CorrectWinners) / player.PronosticsCount * 100, 1);
     }
 
@@ -318,362 +386,26 @@
     {
         return player.PlayerId == currentPlayerId;
     }
+
+    private string GetPlayerLink(int playerId)
+    {
+        return $"/worldbet/player/{playerId}";
+    }
 }
 
 <style>
-    .leaderboard-page {
-        padding: 1rem 0;
-    }
-
-    .page-header {
-        margin-bottom: 2rem;
-    }
-
-    /* Podium */
-    .podium-container {
-        margin: 2rem 0 3rem;
-        padding: 2rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 16px;
-    }
-
-    .podium {
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 1rem;
-        max-width: 900px;
-        margin: 0 auto;
-    }
-
-    .podium-place {
-        flex: 1;
-        max-width: 280px;
-        position: relative;
-        text-align: center;
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
     }
 
     .podium-crown {
-        position: absolute;
-        top: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 2rem;
-        color: #ffd700;
         animation: bounce 2s infinite;
     }
 
-    @@keyframes bounce {
-        0%, 100% { transform: translateX(-50%) translateY(0); }
-        50% { transform: translateX(-50%) translateY(-10px); }
-    }
-
-    .podium-medal {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-    }
-
-    .podium-place.first .podium-medal {
-        color: #ffd700;
-    }
-
-    .podium-place.second .podium-medal {
-        color: #c0c0c0;
-    }
-
-    .podium-place.third .podium-medal {
-        color: #cd7f32;
-    }
-
-    .podium-player {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .player-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin: 0 auto 1rem;
-        border: 4px solid #e9ecef;
-    }
-
-    .player-avatar.champion {
-        width: 100px;
-        height: 100px;
-        font-size: 2rem;
-        border-color: #ffd700;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-    }
-
-    .player-name {
-        font-weight: bold;
-        font-size: 1.1rem;
-        margin-bottom: 0.75rem;
-        color: #333;
-    }
-
-    .player-stats {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-    .player-stats .stat {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.25rem;
-    }
-
-    .podium-rank {
-        background: white;
-        color: #333;
-        font-size: 1.5rem;
-        font-weight: bold;
-        padding: 1rem;
-        border-radius: 8px 8px 0 0;
-    }
-
-    .podium-place.first {
-        order: 2;
-    }
-
-    .podium-place.second {
-        order: 1;
-    }
-
-    .podium-place.third {
-        order: 3;
-    }
-
-    .podium-place.first .podium-rank {
-        background: #ffd700;
-        padding: 1.5rem 1rem;
-    }
-
-    .podium-place.second .podium-rank {
-        background: #c0c0c0;
-        padding: 1.2rem 1rem;
-    }
-
-    .podium-place.third .podium-rank {
-        background: #cd7f32;
-        padding: 1rem;
-    }
-
-    /* My Ranking Card */
-    .my-ranking-card {
-        background: white;
-        border-radius: 12px;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow: hidden;
-        border: 3px solid #dee2e6;
-    }
-
-    .my-ranking-card.top-three {
-        border-color: #ffd700;
-        box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
-    }
-
-    .ranking-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-    }
-
-    .ranking-header h5 {
-        margin: 0;
-        font-size: 1.25rem;
-    }
-
-    .ranking-body {
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-    }
-
-    .rank-badge {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .rank-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #333;
-    }
-
-    .ranking-stats {
-        display: flex;
-        gap: 2rem;
-        flex: 1;
-        flex-wrap: wrap;
-    }
-
-    .stat-item {
-        text-align: center;
-    }
-
-    .stat-value {
-        font-size: 1.75rem;
-        font-weight: bold;
-        color: #667eea;
-    }
-
-    .stat-label {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-
-    /* Leaderboard Table */
-    .leaderboard-table-container {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .leaderboard-table {
-        margin: 0;
-    }
-
-    .leaderboard-table thead {
-        background: #f8f9fa;
-    }
-
-    .leaderboard-table th {
-        font-weight: 600;
-        border-bottom: 2px solid #dee2e6;
-    }
-
-    .leaderboard-table tbody tr {
-        transition: all 0.2s;
-    }
-
-    .leaderboard-table tbody tr:hover {
-        background-color: #f8f9fa;
-    }
-
-    .leaderboard-table tbody tr.current-player {
-        background-color: #e7f3ff;
-        font-weight: 600;
-    }
-
-    .leaderboard-table tbody tr.top-player {
-        background-color: #fff8e1;
-    }
-
-    .rank-cell {
-        display: flex;
-        align-items: center;
-    }
-
-    .rank-number {
-        font-weight: 600;
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
-    }
-
-    .rank-gold {
-        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-        color: #000;
-    }
-
-    .rank-silver {
-        background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-        color: #000;
-    }
-
-    .rank-bronze {
-        background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
-        color: #000;
-    }
-
-    .player-cell {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .player-avatar-small {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 0.875rem;
-    }
-
-    .player-name-text {
-        font-weight: 500;
-    }
-
-    .points-value {
-        color: #667eea;
-        font-size: 1.1rem;
-    }
-
-    /* Mobile Responsive */
-    @@media (max-width: 768px) {
-        .podium {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .podium-place {
-            max-width: 100%;
-        }
-
-        .podium-place.first {
-            order: 1;
-        }
-
-        .podium-place.second {
-            order: 2;
-        }
-
-        .podium-place.third {
-            order: 3;
-        }
-
-        .ranking-body {
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .ranking-stats {
-            gap: 1rem;
-            justify-content: space-around;
-        }
-
-        .stat-item {
-            flex: 1;
-            min-width: 80px;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
+    @@media (min-width: 600px) {
+        .mud-grid-item:first-child {
+            order: 2 !important;
         }
     }
 </style>

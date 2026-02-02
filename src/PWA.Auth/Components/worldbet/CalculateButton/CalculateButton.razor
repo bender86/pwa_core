@@ -1,0 +1,90 @@
+@* Components/WorldBet/CalculateButton/CalculateButton.razor *@
+@using dto.worldbet.Requests
+@inject IAdminService AdminService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudTooltip Text="Calculer les points">
+    <MudIconButton 
+        Icon="@Icons.Material.Filled.Calculate" 
+        Color="Color.Primary"
+        Size="Size.Small"
+        OnClick="ShowConfirmDialog"
+        Disabled="_isCalculating" />
+</MudTooltip>
+
+@code {
+    [Parameter, EditorRequired]
+    public int MatchId { get; set; }
+    
+    [Parameter, EditorRequired]
+    public int? ScoreTeam1 { get; set; }
+    
+    [Parameter, EditorRequired]
+    public int? ScoreTeam2 { get; set; }
+    
+    [Parameter]
+    public EventCallback OnCalculated { get; set; }
+    
+    private bool _isCalculating = false;
+    
+    private async Task ShowConfirmDialog()
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirmer le calcul",
+            $"Calculer les points pour ce match ?\n\nScore : {ScoreTeam1} - {ScoreTeam2}\n\n⚠️ Cette action recalculera tous les pronostics.",
+            yesText: "Calculer",
+            cancelText: "Annuler");
+
+        if (result == true)
+        {
+            await HandleCalculate();
+        }
+    }
+    
+    private async Task HandleCalculate()
+    {
+        _isCalculating = true;
+        StateHasChanged();
+        
+        try
+        {
+            var request = new UpdateMatchScoreRequest
+            {
+                MatchId = MatchId,
+                ScoreTeam1 = ScoreTeam1!.Value,
+                ScoreTeam2 = ScoreTeam2!.Value
+            };
+            
+            var success = await AdminService.UpdateMatchScore(request);
+            
+            if (success)
+            {
+                Snackbar.Add(
+                    "Points calculés avec succès !", 
+                    Severity.Success
+                );
+                await OnCalculated.InvokeAsync();
+            }
+            else
+            {
+                Snackbar.Add(
+                    "Échec du calcul des points", 
+                    Severity.Error
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(
+                $"Erreur : {ex.Message}", 
+                Severity.Error
+            );
+        }
+        finally
+        {
+            _isCalculating = false;
+            StateHasChanged();
+        }
+    }
+}

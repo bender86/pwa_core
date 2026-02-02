@@ -14,106 +14,131 @@
         <p class="lead">Pronostiquez et gagnez !</p>
     </div>
 
-    <!-- Prochains matches - Carousel -->
-    <div class="section mb-5">
-        <div class="section-header">
-            <MudText Typo="Typo.h4" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="me-2" />
-                Prochains Matches
-            </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Faites vos pronostics avant le verrouillage
-            </MudText>
-        </div>
+    <div class="row">
+        <!-- Prochains matches - Carousel -->
+        <div class="col-md-6 col-sm-12">
+            <div class="section mb-5">
+                <div class="section-header">
+                    <MudText Typo="Typo.h4" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="me-2" />
+                        Prochains Matches
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Faites vos pronostics avant le verrouillage
+                    </MudText>
+                </div>
 
-        @if (isLoadingUpcoming)
-        {
-            <div class="text-center py-5">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText Typo="Typo.body1" Class="mt-2">Chargement...</MudText>
-            </div>
-        }
-        else if (!upcomingMatches.Any())
-        {
-            <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info">
-                Aucun match à venir pour le moment
-            </MudAlert>
-        }
-        else
-        {
-            <div class="carousel-container">
-                <MudCarousel @ref="carousel"
-                             Class="carousel-custom" 
-                             Style="height: auto; min-height: 500px;"
-                             ShowArrows="@(upcomingMatches.Count > 1)" 
-                             ShowBullets="@(upcomingMatches.Count > 1)"
-                             EnableSwipeGesture="true"
-                             AutoCycle="true"
-                             AutoCycleTime="TimeSpan.FromSeconds(7)"
-                             TData="object"
-                             SelectedIndex="@selectedIndex"
-                             SelectedIndexChanged="@((int newIndex) => selectedIndex = newIndex)">
-                    @foreach (var match in upcomingMatches)
-                    {
-                        var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
-                        
-                        <MudCarouselItem Transition="Transition.Slide" Class="carousel-item-custom">
-                            <div class="d-flex justify-center align-center" style="width: 100%; min-height: 500px;">
-                                <div class="carousel-card-wrapper">
-                                    <MatchCard Match="@match" 
-                                               HasPronostic="@hasProno" 
-                                               UserPronostic="@prono"
-                                               OnPronosticSaved="@HandlePronosticSaved" />
-                                </div>
-                            </div>
-                        </MudCarouselItem>
-                    }
-                </MudCarousel>
-            </div>
-        }
-    </div>
-
-    <!-- Derniers résultats -->
-    <div class="section mb-5">
-        <div class="section-header">
-            <MudText Typo="Typo.h4" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Class="me-2" />
-                Derniers Résultats
-            </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Les matches récemment terminés
-            </MudText>
-        </div>
-
-        @if (isLoadingRecent)
-        {
-            <div class="text-center py-5">
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText Typo="Typo.body1" Class="mt-2">Chargement...</MudText>
-            </div>
-        }
-        else if (!recentMatches.Any())
-        {
-            <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info">
-                Aucun résultat disponible
-            </MudAlert>
-        }
-        else
-        {
-            <MudGrid>
-                @foreach (var match in recentMatches)
+                @if (isLoadingUpcoming)
                 {
-                    var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
-                    
-                    <MudItem xs="12" md="6">
-                        <MatchCard Match="@match" 
-                                   HasPronostic="@hasProno" 
-                                   UserPronostic="@prono"
-                                   OnPronosticSaved="@HandlePronosticSaved" />
-                    </MudItem>
+                    <div class="text-center py-5">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body1" Class="mt-2">Chargement...</MudText>
+                    </div>
                 }
-            </MudGrid>
-        }
+                else if (!upcomingMatches.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info">
+                        Aucun match à venir pour le moment
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="carousel-container">
+                        <MudCarousel @ref="carouselUpcoming"
+                                    Class="carousel-custom" 
+                                    Style="height: auto; min-height: 500px;"
+                                    ShowArrows="@(upcomingMatches.Count > 1)" 
+                                    ShowBullets="@(upcomingMatches.Count > 1)"
+                                    EnableSwipeGesture="true"
+                                    AutoCycle="@isCarouselUpcomingAutoPlaying"
+                                    AutoCycleTime="TimeSpan.FromSeconds(7)"
+                                    TData="object"
+                                    SelectedIndex="@selectedUpcomingIndex"
+                                    SelectedIndexChanged="@((int newIndex) => selectedUpcomingIndex = newIndex)">
+                            @foreach (var match in upcomingMatches)
+                            {
+                                var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
+                                
+                                <MudCarouselItem Transition="Transition.Slide" Class="carousel-item-custom">
+                                    <div class="d-flex justify-center align-center" style="width: 100%; min-height: 500px;">
+                                        <div class="carousel-card-wrapper">
+                                            <MatchCard Match="@match" 
+                                                    HasPronostic="@hasProno" 
+                                                    UserPronostic="@prono"
+                                                    OnPronosticSaved="@HandlePronosticSaved"
+                                                    OnPronosticModalOpened="@(() => PauseCarousel(true))"
+                                                    OnPronosticModalClosed="@(() => ResumeCarousel(true))" />
+                                        </div>
+                                    </div>
+                                </MudCarouselItem>
+                            }
+                        </MudCarousel>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Derniers résultats - Carousel -->
+        <div class="col-md-6 col-sm-12">
+            <div class="section mb-5">
+                <div class="section-header">
+                    <MudText Typo="Typo.h4" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Class="me-2" />
+                        Derniers Résultats
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Les matches récemment terminés
+                    </MudText>
+                </div>
+
+                @if (isLoadingRecent)
+                {
+                    <div class="text-center py-5">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body1" Class="mt-2">Chargement...</MudText>
+                    </div>
+                }
+                else if (!recentMatches.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info">
+                        Aucun résultat disponible
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="carousel-container">
+                        <MudCarousel @ref="carouselRecent"
+                                    Class="carousel-custom" 
+                                    Style="height: auto; min-height: 500px;"
+                                    ShowArrows="@(recentMatches.Count > 1)" 
+                                    ShowBullets="@(recentMatches.Count > 1)"
+                                    EnableSwipeGesture="true"
+                                    AutoCycle="@isCarouselRecentAutoPlaying"
+                                    AutoCycleTime="TimeSpan.FromSeconds(7)"
+                                    TData="object"
+                                    SelectedIndex="@selectedRecentIndex"
+                                    SelectedIndexChanged="@((int newIndex) => selectedRecentIndex = newIndex)">
+                            @foreach (var match in recentMatches)
+                            {
+                                var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
+                                
+                                <MudCarouselItem Transition="Transition.Slide" Class="carousel-item-custom">
+                                    <div class="d-flex justify-center align-center" style="width: 100%; min-height: 500px;">
+                                        <div class="carousel-card-wrapper">
+                                            <MatchCard Match="@match" 
+                                                    HasPronostic="@hasProno" 
+                                                    UserPronostic="@prono"
+                                                    OnPronosticSaved="@HandlePronosticSaved"/>
+                                            
+                                        </div>
+                                    </div>
+                                </MudCarouselItem>
+                            }
+                        </MudCarousel>
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 
     <!-- Quick Stats -->
@@ -163,8 +188,15 @@
 </div>
 
 @code {
-    private MudCarousel<object>? carousel;
-    private int selectedIndex = 0;
+    // Carousel Upcoming
+    private MudCarousel<object>? carouselUpcoming;
+    private int selectedUpcomingIndex = 0;
+    private bool isCarouselUpcomingAutoPlaying = true;
+    
+    // Carousel Recent
+    private MudCarousel<object>? carouselRecent;
+    private int selectedRecentIndex = 0;
+    private bool isCarouselRecentAutoPlaying = true;
     
     private List<MatchDto> upcomingMatches = new();
     private List<MatchDto> recentMatches = new();
@@ -205,7 +237,7 @@
         isLoadingRecent = true;
         try
         {
-            recentMatches = await TournamentService.GetRecentMatchesAsync(6);
+            recentMatches = await TournamentService.GetRecentMatchesAsync(10);
         }
         catch (Exception ex)
         {
@@ -237,29 +269,53 @@
         userPronostics[prono.MatchId] = prono;
         await InvokeAsync(StateHasChanged);
     }
+
+    private void PauseCarousel(bool isUpcoming)
+    {
+        if (isUpcoming)
+        {
+            Console.WriteLine("Pausing upcoming carousel - modal opened");
+            isCarouselUpcomingAutoPlaying = false;
+        }
+        else
+        {
+            Console.WriteLine("Pausing recent carousel - modal opened");
+            isCarouselRecentAutoPlaying = false;
+        }
+        StateHasChanged();
+    }
+
+    private void ResumeCarousel(bool isUpcoming)
+    {
+        if (isUpcoming)
+        {
+            Console.WriteLine("Resuming upcoming carousel - modal closed");
+            isCarouselUpcomingAutoPlaying = true;
+        }
+        else
+        {
+            Console.WriteLine("Resuming recent carousel - modal closed");
+            isCarouselRecentAutoPlaying = true;
+        }
+        StateHasChanged();
+    }
 }
 
 <style>
     .worldbet-home {
-        padding: 2rem 0;
+        padding: 2rem 1rem;
     }
 
     .hero-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 3rem 2rem;
-        border-radius: 16px;
         margin-bottom: 3rem;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
 
     .hero-section h1 {
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .hero-section .lead {
-        color: rgba(255, 255, 255, 0.9);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: bold;
     }
 
     .section {
@@ -270,120 +326,90 @@
         margin-bottom: 1.5rem;
     }
 
-    /* Carousel Container */
     .carousel-container {
-        max-width: 100%;
+        position: relative;
+        width: 100%;
+    }
+
+    .carousel-custom {
+        border-radius: 12px;
         overflow: hidden;
     }
 
-    /* Carousel Customization */
-    .carousel-custom {
-        border-radius: 12px;
-    }
-
     .carousel-item-custom {
-        padding: 1rem 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 1rem;
     }
 
     .carousel-card-wrapper {
-        max-width: 600px;
         width: 100%;
-        padding: 0 1rem;
+        max-width: 500px;
     }
 
-    /* Stats Cards */
     .stat-card {
         border-radius: 12px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        cursor: default;
-        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
     .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     }
 
     .stat-icon {
-        width: 70px;
-        height: 70px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-        border-radius: 12px;
-        flex-shrink: 0;
+        color: white;
     }
 
-    /* MudCarousel custom styles */
-    ::deep .carousel-custom .mud-carousel-elements {
-        height: 100% !important;
-    }
-
-    ::deep .carousel-custom .mud-carousel-item {
-        height: auto !important;
-        min-height: 500px;
-    }
-
-    ::deep .carousel-custom .mud-button-root {
-        background-color: rgba(102, 126, 234, 0.8) !important;
-        color: white !important;
-    }
-
-    ::deep .carousel-custom .mud-button-root:hover {
-        background-color: rgba(102, 126, 234, 1) !important;
-    }
-
-    ::deep .carousel-custom .mud-carousel-bullets .mud-button-root {
-        background-color: rgba(102, 126, 234, 0.4) !important;
-        width: 12px;
-        height: 12px;
-        min-width: 12px;
-        min-height: 12px;
-        padding: 0;
-        margin: 0 4px;
-    }
-
-    ::deep .carousel-custom .mud-carousel-bullets .mud-selected {
-        background-color: rgba(102, 126, 234, 1) !important;
-    }
-
-    /* Mobile Responsive */
-    @@media (max-width: 960px) {
-        .carousel-card-wrapper {
-            max-width: 100%;
-            padding: 0 0.5rem;
-        }
-    }
-
-    @@media (max-width: 600px) {
+    /* Responsive */
+    @@media (max-width: 768px) {
         .worldbet-home {
-            padding: 1rem 0;
-        }
-
-        .hero-section {
-            padding: 2rem 1rem;
+            padding: 1rem 0.5rem;
         }
 
         .hero-section h1 {
             font-size: 2rem;
         }
 
+        .carousel-container {
+            min-height: 450px;
+        }
+
+        .carousel-custom {
+            min-height: 450px !important;
+        }
+
         .carousel-card-wrapper {
-            padding: 0 0.25rem;
+            max-width: 100%;
         }
 
-        ::deep .carousel-custom .mud-carousel-item {
-            min-height: 550px;
+        .stat-card {
+            margin-bottom: 1rem;
         }
+    }
 
-        .stat-card .d-flex {
-            flex-direction: column;
-            text-align: center;
-        }
+    /* Animation pour les carousels */
+    .mud-carousel {
+        transition: all 0.3s ease;
+    }
 
-        .stat-icon {
-            margin: 0 auto 0.5rem auto !important;
-        }
+    /* Boutons de navigation du carousel */
+    .mud-carousel .mud-icon-button {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .mud-carousel .mud-icon-button:hover {
+        background: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 </style>

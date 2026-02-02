@@ -1,7 +1,8 @@
 @* Components/WorldBet/PronosticButton/PronosticButton.razor *@
-@* Version avec MudIconButton *@
+@namespace PWA.Auth.Components.worldbet.PronosticButton
 @using dto.worldbet.Models
 @using dto.worldbet.Enums
+@inject IDialogService DialogService
 
 @if (CanPronostic())
 {
@@ -34,12 +35,6 @@ else
     </MudTooltip>
 }
 
-<!-- Pronostic Modal -->
-<PronosticModal Show="@showModal"
-                Match="@Match"
-                OnClose="@CloseModal"
-                OnSaved="@HandlePronosticSaved" />
-
 @code {
     [Parameter, EditorRequired] 
     public MatchDto Match { get; set; } = null!;
@@ -51,12 +46,16 @@ else
     public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
     
     [Parameter] 
-    public string Size { get; set; } = "Medium"; // Small, Medium, Large
+    public EventCallback OnModalOpened { get; set; }
+
+    [Parameter]
+    public EventCallback OnModalClosed { get; set; }
+    
+    [Parameter] 
+    public string Size { get; set; } = "Medium";
     
     [Parameter] 
     public string CssClass { get; set; } = "";
-
-    private bool showModal = false;
 
     private bool CanPronostic()
     {
@@ -64,23 +63,50 @@ else
             && DateTime.UtcNow < Match.LockPronosticsAt;
     }
 
-    private void OpenModal()
+    private async Task OpenModal()
     {
-        showModal = true;
-    }
-
-    private void CloseModal()
-    {
-        showModal = false;
-    }
-
-    private async Task HandlePronosticSaved(PronosticDto prono)
-    {
-        showModal = false;
-        
-        if (OnPronosticSaved.HasDelegate)
+        // Notify parent that modal is opening (pause carousel)
+        if (OnModalOpened.HasDelegate)
         {
-            await OnPronosticSaved.InvokeAsync(prono);
+            await OnModalOpened.InvokeAsync();
+        }
+
+        var parameters = new DialogParameters<PronosticModal>
+        {
+            { x => x.Match, Match }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        var dialog = await DialogService.ShowAsync<PronosticModal>(
+            "Votre Pronostic",
+            parameters,
+            options
+        );
+
+        var result = await dialog.Result;
+
+        // Notify parent that modal is closed (resume carousel)
+        if (OnModalClosed.HasDelegate)
+        {
+            await OnModalClosed.InvokeAsync();
+        }
+
+        // If pronostic was saved, notify parent
+        if (!result.Canceled && result.Data is PronosticDto prono)
+        {
+            if (OnPronosticSaved.HasDelegate)
+            {
+                await OnPronosticSaved.InvokeAsync(prono);
+            }
         }
     }
 

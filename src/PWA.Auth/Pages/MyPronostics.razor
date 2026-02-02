@@ -5,232 +5,160 @@
 @layout WorldBetLayout
 @inject IPronosticService PronosticService
 @inject ITournamentService TournamentService
+@inject ISnackbar Snackbar
 @attribute [Authorize]
 
 <PageTitle>Mes Pronostics</PageTitle>
 
-<div class="my-pronostics-page">
-    <div class="page-header">
-        <div>
-            <h3>⚡ Mes Pronostics</h3>
-            <p class="text-muted">Suivez vos prédictions et vos points gagnés</p>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle"></i> @errorMessage
-            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-        </div>
-    }
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Page Header -->
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Bolt" Class="me-2" />
+        Mes Pronostics
+    </MudText>
 
     @if (isLoading)
     {
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2">Chargement de vos pronostics...</p>
-        </div>
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
     }
     else
     {
-        <!-- Statistics -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="stat-icon bg-primary">
-                        <i class="bi bi-lightning-fill"></i>
+        <!-- Statistics Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <div class="d-flex align-items-center">
+                        <MudAvatar Color="Color.Primary" Size="Size.Large" Class="me-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Bolt" />
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.h4">@pronostics.Count</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Pronostics</MudText>
+                        </div>
                     </div>
-                    <div class="stat-info">
-                        <div class="stat-value">@pronostics.Count</div>
-                        <div class="stat-label">Pronostics</div>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <div class="d-flex align-items-center">
+                        <MudAvatar Color="Color.Success" Size="Size.Large" Class="me-3">
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" />
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.h4">@totalPoints</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Points</MudText>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="stat-icon bg-success">
-                        <i class="bi bi-trophy-fill"></i>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <div class="d-flex align-items-center">
+                        <MudAvatar Color="Color.Info" Size="Size.Large" Class="me-3">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.h4">@exactScores</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Scores exacts</MudText>
+                        </div>
                     </div>
-                    <div class="stat-info">
-                        <div class="stat-value">@totalPoints</div>
-                        <div class="stat-label">Points</div>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <div class="d-flex align-items-center">
+                        <MudAvatar Color="Color.Warning" Size="Size.Large" Class="me-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Schedule" />
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.h4">@pendingCount</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">En attente</MudText>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="stat-icon bg-info">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-value">@exactScores</div>
-                        <div class="stat-label">Scores exacts</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="stat-card">
-                    <div class="stat-icon bg-warning">
-                        <i class="bi bi-clock-fill"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-value">@pendingCount</div>
-                        <div class="stat-label">En attente</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
 
         <!-- Filters -->
-        <div class="filters mb-4">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <select @bind="filterStatus" @bind:after="FilterPronostics" class="form-select">
-                        <option value="">Tous les statuts</option>
-                        <option value="pending">En attente</option>
-                        <option value="correct">Gagnés</option>
-                        <option value="incorrect">Perdus</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <select @bind="filterPhase" @bind:after="FilterPronostics" class="form-select">
-                        <option value="">Toutes les phases</option>
+        <MudPaper Class="pa-4 mb-4" Elevation="2">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" 
+                               @bind-Value="filterStatus"
+                               Label="Statut" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true"
+                               AdornmentIcon="@Icons.Material.Filled.FilterList">
+                        <MudSelectItem Value="@("")">Tous les statuts</MudSelectItem>
+                        <MudSelectItem Value="@("pending")">En attente</MudSelectItem>
+                        <MudSelectItem Value="@("correct")">Gagnés</MudSelectItem>
+                        <MudSelectItem Value="@("incorrect")">Perdus</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" 
+                               @bind-Value="filterPhase"
+                               Label="Phase" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true"
+                               AdornmentIcon="@Icons.Material.Filled.Stadium">
+                        <MudSelectItem Value="@("")">Toutes les phases</MudSelectItem>
                         @foreach (var phase in uniquePhases)
                         {
-                            <option value="@phase">@phase</option>
+                            <MudSelectItem Value="@phase">@phase</MudSelectItem>
                         }
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-check form-switch pt-2">
-                        <input class="form-check-input" type="checkbox" id="showOnlyPoints" 
-                               @bind="showOnlyWithPoints" @bind:after="FilterPronostics">
-                        <label class="form-check-label" for="showOnlyPoints">
-                            Afficher uniquement les pronostics avec points
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    </MudSelect>
+                </MudItem>
 
-        <!-- Pronostics List -->
+                <MudItem xs="12" sm="4" Class="d-flex align-items-center">
+                    <MudSwitch @bind-Value="showOnlyWithPoints" 
+                              Color="Color.Primary"
+                              Label="Seulement avec points" />
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Pronostics Grid -->
         @if (!filteredPronostics.Any())
         {
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> 
+            <MudAlert Severity="Severity.Info" Class="mt-4">
                 @if (filterStatus != "" || filterPhase != "" || showOnlyWithPoints)
                 {
                     <span>Aucun pronostic ne correspond à ces critères.</span>
                 }
                 else
                 {
-                    <span>Vous n'avez pas encore fait de pronostics. Rendez-vous sur la page <a href="/worldbet/matches">Matches</a> pour commencer !</span>
+                    <span>Vous n'avez pas encore fait de pronostics. Rendez-vous sur la page 
+                        <MudLink Href="/worldbet/matches">Matches</MudLink> pour commencer !
+                    </span>
                 }
-            </div>
+            </MudAlert>
         }
         else
         {
-            <div class="pronostics-grid">
+            <MudGrid Spacing="3">
                 @foreach (var prono in filteredPronostics)
                 {
                     var match = matchesDict.GetValueOrDefault(prono.MatchId);
                     if (match == null) continue;
 
-                    <div class="pronostic-card @GetPronosticCardClass(match, prono)">
-                        <div class="pronostic-header">
-                            <div class="match-info">
-                                <span class="badge bg-secondary">@match.PhaseName</span>
-                                @if (!string.IsNullOrEmpty(match.GroupLetter))
-                                {
-                                    <span class="badge bg-info ms-1">Groupe @match.GroupLetter</span>
-                                }
-                                <span class="match-status ms-2">
-                                    @GetMatchStatusBadge(match)
-                                </span>
-                            </div>
-                            <div class="match-date">
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i> @match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
-                                </small>
-                            </div>
-                        </div>
-
-                        <div class="pronostic-body">
-                            <div class="match-display">
-                                <div class="team">
-                                    <div class="team-name">@match.Team1Name</div>
-                                    <div class="team-scores">
-                                        <span class="prediction">@prono.PredictedScoreTeam1</span>
-                                        @if (match.ScoreTeam1.HasValue)
-                                        {
-                                            <span class="actual @(prono.PredictedScoreTeam1 == match.ScoreTeam1 ? "correct" : "incorrect")">
-                                                @match.ScoreTeam1
-                                            </span>
-                                        }
-                                    </div>
-                                </div>
-
-                                <div class="separator">
-                                    <span>-</span>
-                                </div>
-
-                                <div class="team">
-                                    <div class="team-name">@match.Team2Name</div>
-                                    <div class="team-scores">
-                                        <span class="prediction">@prono.PredictedScoreTeam2</span>
-                                        @if (match.ScoreTeam2.HasValue)
-                                        {
-                                            <span class="actual @(prono.PredictedScoreTeam2 == match.ScoreTeam2 ? "correct" : "incorrect")">
-                                                @match.ScoreTeam2
-                                            </span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-
-                            @if (match.Status == MatchStatus.Finished && prono.PointsEarned > 0)
-                            {
-                                <div class="points-earned">
-                                    @if (prono.PointsEarned > 0)
-                                    {
-                                        <i class="bi bi-trophy-fill text-warning"></i>
-                                        <span class="points">+@prono.PointsEarned pts</span>
-                                        @if (IsExactScore(prono, match))
-                                        {
-                                            <span class="badge bg-success ms-2">
-                                                <i class="bi bi-bullseye"></i> Score exact !
-                                            </span>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-x-circle-fill text-danger"></i>
-                                        <span class="no-points">0 pt</span>
-                                    }
-                                </div>
-                            }
-                            else if (match.Status == MatchStatus.Live)
-                            {
-                                <div class="match-live">
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-broadcast"></i> Match en cours
-                                    </span>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="match-pending">
-                                    <i class="bi bi-clock"></i> En attente du résultat
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MatchCard Match="@match" 
+                                   HasPronostic="true" 
+                                   UserPronostic="@prono"
+                                   OnPronosticSaved="@HandlePronosticUpdated" />
+                    </MudItem>
                 }
-            </div>
+            </MudGrid>
         }
     }
-</div>
+</MudContainer>
 
 @code {
     private List<PronosticDto> pronostics = new();
@@ -239,7 +167,6 @@
     private List<string> uniquePhases = new();
 
     private bool isLoading = true;
-    private string? errorMessage;
 
     // Filters
     private string filterStatus = "";
@@ -256,10 +183,15 @@
         await LoadData();
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        // Refilter when filter parameters change
+        FilterPronostics();
+    }
+
     private async Task LoadData()
     {
         isLoading = true;
-        errorMessage = null;
 
         try
         {
@@ -273,7 +205,7 @@
 
             matchesDict = matches.ToDictionary(m => m.MatchId);
 
-            // Extract unique phases
+            // Extract unique phases from matches that have pronostics
             uniquePhases = pronostics
                 .Select(p => matchesDict.GetValueOrDefault(p.MatchId)?.PhaseName)
                 .Where(p => p != null)
@@ -288,7 +220,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Erreur lors du chargement : {ex.Message}";
+            Snackbar.Add($"Erreur lors du chargement : {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -299,11 +231,13 @@
     private void CalculateStats()
     {
         totalPoints = pronostics.Sum(p => p.PointsEarned);
+        
         exactScores = pronostics.Count(p => 
         {
             var match = matchesDict.GetValueOrDefault(p.MatchId);
             return match != null && IsExactScore(p, match);
         });
+        
         pendingCount = pronostics.Count(p => 
         {
             var match = matchesDict.GetValueOrDefault(p.MatchId);
@@ -345,283 +279,37 @@
             return match?.ScheduledDate ?? DateTime.MinValue;
         })
         .ToList();
+
+        StateHasChanged();
     }
 
-    private string GetPronosticCardClass(MatchDto match, PronosticDto prono)
+    private async Task HandlePronosticUpdated(PronosticDto updatedProno)
     {
-        if (match.Status != MatchStatus.Finished)
-            return "pending";
+        // Update the pronostic in the list
+        var index = pronostics.FindIndex(p => p.PronosticId == updatedProno.PronosticId);
+        if (index >= 0)
+        {
+            pronostics[index] = updatedProno;
+        }
+        else
+        {
+            pronostics.Add(updatedProno);
+        }
 
-        if (prono.PointsEarned > 0)
-            return IsExactScore(prono, match) ? "exact-score" : "correct";
+        // Recalculate stats
+        CalculateStats();
+        
+        // Refilter
+        FilterPronostics();
 
-        return "incorrect";
+        Snackbar.Add($"Pronostic mis à jour : {updatedProno.PredictedScoreTeam1}-{updatedProno.PredictedScoreTeam2}", Severity.Success);
     }
 
     private bool IsExactScore(PronosticDto prono, MatchDto match)
     {
-        return prono.PredictedScoreTeam1 == match.ScoreTeam1 
+        return match.ScoreTeam1.HasValue 
+            && match.ScoreTeam2.HasValue
+            && prono.PredictedScoreTeam1 == match.ScoreTeam1 
             && prono.PredictedScoreTeam2 == match.ScoreTeam2;
     }
-
-    private RenderFragment GetMatchStatusBadge(MatchDto match) => match.Status switch
-    {
-        MatchStatus.Live => @<span class="badge bg-success"><i class="bi bi-broadcast"></i> En cours</span>,
-        MatchStatus.Finished => @<span class="badge bg-primary">Terminé</span>,
-        MatchStatus.Postponed => @<span class="badge bg-warning">Reporté</span>,
-        _ => @<span class="badge bg-secondary">Programmé</span>
-    };
 }
-
-<style>
-    .my-pronostics-page {
-        padding: 1rem 0;
-    }
-
-    .page-header {
-        margin-bottom: 2rem;
-    }
-
-    .page-header h3 {
-        margin-bottom: 0.5rem;
-    }
-
-    /* Statistics Cards */
-    .stat-card {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        transition: transform 0.2s;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-    }
-
-    .stat-info {
-        flex: 1;
-    }
-
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-        line-height: 1;
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-    /* Pronostics Grid */
-    .pronostics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .pronostic-card {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: all 0.3s;
-        border: 3px solid transparent;
-    }
-
-    .pronostic-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-    }
-
-    .pronostic-card.exact-score {
-        border-color: #28a745;
-    }
-
-    .pronostic-card.correct {
-        border-color: #17a2b8;
-    }
-
-    .pronostic-card.incorrect {
-        border-color: #dc3545;
-    }
-
-    .pronostic-header {
-        padding: 1rem;
-        background: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .match-info {
-        margin-bottom: 0.5rem;
-    }
-
-    .pronostic-body {
-        padding: 1.5rem;
-    }
-
-    .match-display {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .team {
-        flex: 1;
-        text-align: center;
-    }
-
-    .team-name {
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-        font-size: 1rem;
-    }
-
-    .team-scores {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .prediction {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #495057;
-        background: #e9ecef;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        min-width: 50px;
-        display: inline-block;
-    }
-
-    .actual {
-        font-size: 1.5rem;
-        font-weight: bold;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        min-width: 50px;
-        display: inline-block;
-    }
-
-    .actual.correct {
-        background: #d4edda;
-        color: #155724;
-        border: 2px solid #28a745;
-    }
-
-    .actual.incorrect {
-        background: #f8d7da;
-        color: #721c24;
-        border: 2px solid #dc3545;
-    }
-
-    .separator {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #6c757d;
-    }
-
-    .points-earned {
-        text-align: center;
-        padding: 1rem;
-        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-        border-radius: 8px;
-        color: white;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
-
-    .points-earned .points {
-        font-size: 1.5rem;
-    }
-
-    .points-earned i {
-        font-size: 1.5rem;
-    }
-
-    .no-points {
-        color: rgba(255,255,255,0.8);
-    }
-
-    .match-pending {
-        text-align: center;
-        padding: 1rem;
-        background: #e9ecef;
-        border-radius: 8px;
-        color: #6c757d;
-    }
-
-    .match-live {
-        text-align: center;
-        padding: 1rem;
-    }
-
-    /* Mobile Responsive */
-    @@media (max-width: 768px) {
-        .pronostics-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .stat-card {
-            padding: 1rem;
-        }
-
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            font-size: 1.2rem;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-        }
-
-        .prediction, .actual {
-            font-size: 1.2rem;
-            padding: 0.4rem 0.8rem;
-            min-width: 40px;
-        }
-
-        .team-name {
-            font-size: 0.9rem;
-        }
-
-        .match-display {
-            gap: 0.5rem;
-        }
-    }
-
-    @@media (max-width: 576px) {
-        .match-display {
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .separator {
-            transform: rotate(90deg);
-        }
-
-        .team-scores {
-            gap: 0.5rem;
-        }
-    }
-</style>

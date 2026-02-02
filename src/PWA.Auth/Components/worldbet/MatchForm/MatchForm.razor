@@ -40,7 +40,7 @@
                        AdornmentIcon="@Icons.Material.Filled.Groups"
                        AdornmentColor="Color.Secondary">
                 <MudSelectItem Value="@((string)null!)">Aucun groupe</MudSelectItem>
-                @for (char c = 'A'; c <= 'H'; c++)
+                @for (char c = 'A'; c <= 'J'; c++)
                 {
                     var groupLetter = c.ToString();
                     <MudSelectItem Value="@groupLetter">Groupe @groupLetter</MudSelectItem>

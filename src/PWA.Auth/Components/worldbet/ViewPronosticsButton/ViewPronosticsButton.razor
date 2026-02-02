@@ -1,0 +1,67 @@
+@* Components/worldbet/ViewPronosticsButton/ViewPronosticsButton.razor *@
+@namespace PWA.Auth.Components.worldbet.ViewPronosticsButton
+@inject IDialogService DialogService
+
+<MudButton OnClick="OpenDialog" 
+           Variant="Variant.Outlined" 
+           Color="Color.Info"
+           Size="Size.Small"
+           Disabled="@(!CanView)"
+           StartIcon="@Icons.Material.Filled.Visibility">
+    @ButtonText
+</MudButton>
+
+@code {
+    [Parameter, EditorRequired]
+    public int MatchId { get; set; }
+
+    [Parameter]
+    public DateTime? ScheduledDate { get; set; }
+
+    [Parameter]
+    public MatchStatus? Status { get; set; }
+
+    [Parameter]
+    public Size Size { get; set; } = Size.Small;
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Voir";
+
+    private bool CanView
+    {
+        get
+        {
+            if (Status.HasValue)
+            {
+                return Status.Value == MatchStatus.Finished || 
+                       Status.Value == MatchStatus.Live;
+            }
+            
+            return !ScheduledDate.HasValue || DateTime.UtcNow >= ScheduledDate.Value;
+        }
+    }
+    
+    private async Task OpenDialog()
+    {
+        var parameters = new DialogParameters<MatchPronosticsDialog>
+        {
+            { x => x.MatchId, MatchId }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+        
+        await DialogService.ShowAsync<MatchPronosticsDialog>(
+            "Pronostics du match", 
+            parameters, 
+            options
+        );
+    }
+}

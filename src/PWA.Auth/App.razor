@@ -44,3 +44,24 @@
         }
     }
 }
+<style>
+        /* ... votre CSS existant ... */
+
+        /* Fix z-index pour les dialogs MudBlazor */
+        .mud-overlay {
+            z-index: 2000 !important;
+        }
+
+        .mud-dialog-container {
+            z-index: 2001 !important;
+        }
+
+        .mud-dialog {
+            z-index: 2002 !important;
+        }
+
+        /* Carousel doit rester en dessous */
+        .mud-carousel {
+            z-index: 1 !important;
+        }
+    </style>

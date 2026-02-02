@@ -1,4 +1,5 @@
-@* /home/admin_maef/Projects/PWA/pwa_core/src/PWA.Auth/Components/WorldBet/MatchCard/MatchCard.razor *@
+@* Components/WorldBet/MatchCard/MatchCard.razor *@
+@namespace PWA.Auth.Components.worldbet.MatchCard
 @using dto.worldbet.Models
 @using dto.worldbet.Enums
 
@@ -59,15 +60,33 @@
                         <div class="display-6">@UserPronostic.PredictedScoreTeam2</div>
                     </div>
                 </div>
+                @if (UserPronostic.PointsEarned > 0)
+                {
+                    <div class="text-center mt-2">
+                        <span class="badge bg-success">+@UserPronostic.PointsEarned points</span>
+                    </div>
+                }
             </div>
         }
 
-        @* PronosticButton gère son propre modal *@
-        <div class="text-center">
+        @* Boutons d'action *@
+        <div class="d-flex justify-content-center gap-2">
+            @* Bouton Voir les pronostics (seulement pour matches terminés ou en cours) *@
+            @if (Match.Status == MatchStatus.Live || Match.Status == MatchStatus.Finished)
+            {
+                <ViewPronosticsButton 
+                    MatchId="@Match.MatchId"
+                    Status="@Match.Status"
+                    ButtonText="Voir les pronos" />
+            }
+            
+            @* Bouton pour faire un pronostic *@
             <PronosticButton Match="@Match" 
-                 HasPronostic="@HasPronostic" 
-                 OnPronosticSaved="@OnPronosticSaved"
-                 Size="Small" />
+                           HasPronostic="@HasPronostic" 
+                           OnPronosticSaved="@HandlePronosticSaved"
+                           OnModalOpened="@NotifyModalOpened"
+                           OnModalClosed="@NotifyModalClosed"
+                           Size="Small" />
         </div>
     </div>
 </div>
@@ -84,6 +103,36 @@
 
     [Parameter]
     public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
+
+    [Parameter]
+    public EventCallback OnPronosticModalOpened { get; set; }
+
+    [Parameter]
+    public EventCallback OnPronosticModalClosed { get; set; }
+
+    private async Task HandlePronosticSaved(PronosticDto prono)
+    {
+        if (OnPronosticSaved.HasDelegate)
+        {
+            await OnPronosticSaved.InvokeAsync(prono);
+        }
+    }
+
+    private async Task NotifyModalOpened()
+    {
+        if (OnPronosticModalOpened.HasDelegate)
+        {
+            await OnPronosticModalOpened.InvokeAsync();
+        }
+    }
+
+    private async Task NotifyModalClosed()
+    {
+        if (OnPronosticModalClosed.HasDelegate)
+        {
+            await OnPronosticModalClosed.InvokeAsync();
+        }
+    }
 
     private string GetStatusBadgeClass()
     {
@@ -104,7 +153,7 @@
         if (!CanPronostic())
             return "Verrouillé";
 
-        return "Ouvert";
+        return "bg-success";
     }
 
     private bool CanPronostic()
