@@ -60,7 +60,7 @@
                         <div class="display-6">@UserPronostic.PredictedScoreTeam2</div>
                     </div>
                 </div>
-                @if (UserPronostic.PointsEarned > 0)
+                @if (UserPronostic.PointsEarned >= 0)
                 {
                     <div class="text-center mt-2">
                         <span class="badge bg-success">+@UserPronostic.PointsEarned points</span>
@@ -153,7 +153,7 @@
         if (!CanPronostic())
             return "Verrouillé";
 
-        return "bg-success";
+        return "Pending";
     }
 
     private bool CanPronostic()

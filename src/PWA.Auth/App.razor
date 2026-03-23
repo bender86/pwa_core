@@ -2,6 +2,11 @@
 @using PWA.Auth.Components
 @inject IJSRuntime JSRuntime
 
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
@@ -48,16 +53,15 @@
         /* ... votre CSS existant ... */
 
         /* Fix z-index pour les dialogs MudBlazor */
-        .mud-overlay {
-            z-index: 2000 !important;
-        }
-
         .mud-dialog-container {
-            z-index: 2001 !important;
+            z-index: 1300 !important;
         }
 
         .mud-dialog {
-            z-index: 2002 !important;
+            z-index: 1301 !important;
+        }
+        .mud-overlay-dialog {
+            z-index: 1299 !important;
         }
 
         /* Carousel doit rester en dessous */

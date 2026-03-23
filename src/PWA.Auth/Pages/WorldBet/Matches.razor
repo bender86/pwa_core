@@ -41,7 +41,7 @@
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" 
                                Value="@filterPhase"
-                               ValueChanged="@((string value) => { filterPhase = value; FilterMatches(); })"
+                               ValueChanged="@OnPhaseChanged"
                                Label="Phase" 
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
@@ -57,7 +57,7 @@
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" 
                                Value="@filterGroup"
-                               ValueChanged="@((string value) => { filterGroup = value; FilterMatches(); })"
+                               ValueChanged="@OnGroupChanged"
                                Label="Groupe" 
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
@@ -73,7 +73,7 @@
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" 
                                Value="@filterStatus"
-                               ValueChanged="@((string value) => { filterStatus = value; FilterMatches(); })"
+                               ValueChanged="@OnStatusChanged"
                                Label="Statut" 
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
@@ -297,9 +297,9 @@
     private bool isDeleting = false;
     
     // Filters
-    private string filterPhase = "";
-    private string filterGroup = "";
-    private string filterStatus = "";
+    private string? filterPhase = null;
+    private string? filterGroup = null;
+    private string? filterStatus = null;
     private string searchString = "";
     
     // Modal states
@@ -327,7 +327,7 @@
     }
     
     private async Task LoadAllData()
-    {
+    {Console.WriteLine($"LoadAllData");
         isLoading = true;
         try
         {
@@ -371,6 +371,27 @@
             (string.IsNullOrEmpty(filterGroup) || m.GroupLetter == filterGroup) &&
             (string.IsNullOrEmpty(filterStatus) || m.Status.ToString() == filterStatus)
         ).OrderBy(m => m.ScheduledDate).ToList();
+    }
+    private void OnPhaseChanged(string value)
+    {
+        Console.WriteLine($"OnPhaseChanged called with: {value}");
+        filterPhase = value;
+        FilterMatches();
+        StateHasChanged();
+    }
+
+    private void OnGroupChanged(string value)
+    {
+        filterGroup = value;
+        FilterMatches();
+        StateHasChanged();
+    }
+
+    private void OnStatusChanged(string value)
+    {
+        filterStatus = value;
+        FilterMatches();
+        StateHasChanged();
     }
 
     private Func<MatchDto, bool> QuickFilter => x =>
@@ -594,4 +615,11 @@
             font-size: 1.5rem;
         }
     }
+    .mud-popover-provider {
+    z-index: 9999 !important;
+}
+
+.mud-list-item {
+    pointer-events: all !important;
+}
 </style>

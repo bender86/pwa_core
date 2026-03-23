@@ -32,7 +32,8 @@
         
         <MudItem xs="12" md="6">
             <MudSelect T="string" 
-                       @bind-Value="Model.GroupLetter"
+                       Value="@Model.GroupLetter"
+                       ValueChanged="@OnGroupChanged"
                        Label="Groupe (optionnel)" 
                        Variant="Variant.Outlined"
                        Clearable="true"
@@ -40,10 +41,9 @@
                        AdornmentIcon="@Icons.Material.Filled.Groups"
                        AdornmentColor="Color.Secondary">
                 <MudSelectItem Value="@((string)null!)">Aucun groupe</MudSelectItem>
-                @for (char c = 'A'; c <= 'J'; c++)
+                @foreach (var group in availableGroups)
                 {
-                    var groupLetter = c.ToString();
-                    <MudSelectItem Value="@groupLetter">Groupe @groupLetter</MudSelectItem>
+                    <MudSelectItem Value="@group">Groupe @group</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
@@ -59,7 +59,7 @@
                        Disabled="@IsLoading"
                        AdornmentIcon="@Icons.Material.Filled.Sports"
                        AdornmentColor="Color.Primary">
-                @foreach (var team in Teams.Where(t => t.TeamId != Model.Team2Id))
+                @foreach (var team in filteredTeams.Where(t => t.TeamId != Model.Team2Id))
                 {
                     <MudSelectItem Value="@team.TeamId">@team.Name</MudSelectItem>
                 }
@@ -76,7 +76,7 @@
                        Disabled="@IsLoading"
                        AdornmentIcon="@Icons.Material.Filled.Sports"
                        AdornmentColor="Color.Primary">
-                @foreach (var team in Teams.Where(t => t.TeamId != Model.Team1Id))
+                @foreach (var team in filteredTeams.Where(t => t.TeamId != Model.Team1Id))
                 {
                     <MudSelectItem Value="@team.TeamId">@team.Name</MudSelectItem>
                 }
@@ -254,7 +254,8 @@
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public EventCallback OnSubmit { get; set; }
-
+    // Filtered teams list
+    private List<TeamDto> filteredTeams = new();
     private MudForm? form;
     private bool isValid;
 
@@ -263,6 +264,13 @@
     private TimeSpan? scheduledTime;
     private DateTime? lockDate;
     private TimeSpan? lockTime;
+    // Computed from Teams parameter
+    private List<string> availableGroups => Teams
+        .Where(t => !string.IsNullOrEmpty(t.GroupLetter))
+        .Select(t => t.GroupLetter!)
+        .Distinct()
+        .OrderBy(g => g)
+        .ToList();
 
     protected override void OnParametersSet()
     {
@@ -289,8 +297,38 @@
             lockDate = Model.LockPronosticsAt.Date;
             lockTime = Model.LockPronosticsAt.TimeOfDay;
         }
+        // Initialize filtered teams based on current group
+        if (!string.IsNullOrEmpty(Model?.GroupLetter))
+            filteredTeams = Teams.Where(t => t.GroupLetter == Model.GroupLetter).ToList();
+        else
+            filteredTeams = Teams.ToList();
     }
 
+    // Called when group changes
+    private void OnGroupChanged(string? value)
+    {
+        Model.GroupLetter = value;
+        
+        // Reset team selection only if selected teams are not in the new group
+        if (!string.IsNullOrEmpty(value))
+        {
+            var teamsInGroup = Teams.Where(t => t.GroupLetter == value).ToList();
+            
+            if (!teamsInGroup.Any(t => t.TeamId == Model.Team1Id))
+                Model.Team1Id = 0;
+            if (!teamsInGroup.Any(t => t.TeamId == Model.Team2Id))
+                Model.Team2Id = 0;
+                
+            filteredTeams = teamsInGroup;
+        }
+        else
+        {
+            // No group selected — show all teams
+            filteredTeams = Teams.ToList();
+        }
+        
+        StateHasChanged();
+    }
     private async Task HandleSubmit()
     {
         if (form != null)
