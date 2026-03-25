@@ -33,4 +33,16 @@ public class WorldBetApiClient
         var client = _httpClientFactory.CreateClient("WorldBetAPI");
         return await client.DeleteAsync(endpoint);
     }
+    public async Task<HttpResponseMessage> PostAsync(string endpoint)
+    {
+        var client = _httpClientFactory.CreateClient("WorldBetAPI");
+        return await client.PostAsync(endpoint, null);
+    }
+
+    // Returns the base URL of the WorldBetAPI client
+    public Task<string> GetBaseUrlAsync()
+    {
+        var client = _httpClientFactory.CreateClient("WorldBetAPI");
+        return Task.FromResult(client.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty);
+    }
 }

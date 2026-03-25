@@ -2,8 +2,7 @@
 @page "/worldbet/notifications"
 @layout WorldBetLayout
 @inject IJSRuntime JS
-@inject IConfiguration Config
-@inject HttpClient Http
+@inject WorldBetApiClient WorldBetApi
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 <MudText Typo="Typo.h5" Class="mb-4">Notifications</MudText>
@@ -105,7 +104,7 @@ else
 
         if (_permission == "granted")
         {
-            var status = await Http.GetFromJsonAsync<SubscriptionStatus>("api/notifications/status");
+            var status = await WorldBetApi.GetFromJsonAsync<SubscriptionStatus>("notifications/status");
             _subscribed = status?.IsSubscribed ?? false;
         }
 
@@ -121,7 +120,7 @@ else
         try
         {
             var token      = await LocalStorage.GetItemAsync<string>("authToken");
-            var apiBaseUrl = Config["ApiBaseUrl"] ?? string.Empty;
+            var apiBaseUrl = await WorldBetApi.GetBaseUrlAsync();
 
             var result = await JS.InvokeAsync<SubscribeResult>("subscribeToPush", apiBaseUrl, token);
 
@@ -154,7 +153,7 @@ else
 
         try
         {
-            var response = await Http.PostAsync("api/notifications/test", null);
+            var response = await WorldBetApi.PostAsync("notifications/test");
             if (response.IsSuccessStatusCode)
                 _success = "Notif envoyée ! Tu devrais la recevoir dans quelques secondes.";
             else
@@ -177,7 +176,7 @@ else
 
         try
         {
-            await Http.DeleteAsync("api/notifications/unsubscribe");
+            await WorldBetApi.DeleteAsync("notifications/unsubscribe");
             _subscribed = false;
         }
         catch (Exception ex)
