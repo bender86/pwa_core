@@ -4,6 +4,9 @@
 @using dto.user.Models
 @using PWA.Auth.Models
 @using dto.common.Enums
+@inject IJSRuntime JS
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject WorldBetApiClient WorldBetApi
 
 @inject IUserService UserService
 @inject IMfaService MfaService
@@ -45,7 +48,67 @@
                           ErrorMessage="@errorMessage"
                           ShowAdminOptions="false"
                           ShowCancelButton="true" />
+                <!-- ✅ Section enable notif avec son propre toggle -->
+                <div class="mfa-section">
+                    <h4>🔔 Notifications WorldBet</h4>
 
+                    @if (!_notifSupported)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true">
+                            Non disponible dans ce navigateur.<br />
+                            Sur iPhone : <strong>Safari → Partager → Sur l'écran d'accueil</strong>
+                        </MudAlert>
+                    }
+                    else if (_notifPermission == "denied")
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            Permission refusée — réactivez les notifications dans les réglages du navigateur.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudSwitch T="bool"
+                                Value="_notifSubscribed"
+                                ValueChanged="HandleNotifToggle"
+                                Color="Color.Primary"
+                                Disabled="_notifLoading"
+                                Label="@(_notifSubscribed ? "Activées" : "Désactivées")" />
+
+                        <small class="mfa-status">
+                            @if (_notifSubscribed)
+                            {
+                                <span class="status-active">✓ Rappel automatique 1h avant chaque match non pronostiqué</span>
+                            }
+                            else
+                            {
+                                <span class="status-inactive">Active les rappels pour ne plus rater un pronostic</span>
+                            }
+                        </small>
+
+                        @if (_notifSubscribed)
+                        {
+                            <div class="mt-2">
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        @onclick="SendTestNotifAsync"
+                                        disabled="@_notifLoading">
+                                    @if (_notifLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    📨 Envoyer une notif de test
+                                </button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(_notifMessage))
+                        {
+                            <small class="d-block mt-2 @(_notifError ? "status-inactive" : "status-active")">
+                                @_notifMessage
+                            </small>
+                        }
+                    }
+                </div>
                 <!-- ✅ Section MFA séparée avec son propre toggle -->
                 <div class="mfa-section">
                     <h4>🔐 Sécurité</h4>
@@ -296,6 +359,14 @@
 </style>
 
 @code {
+    #region notifications
+    private bool _notifSupported  = false;
+    private bool _notifSubscribed = false;
+    private bool _notifLoading    = false;
+    private string _notifPermission = "default";
+    private string? _notifMessage;
+    private bool _notifError;
+    #endregion
     private UserFormModel? model;
     private bool isLoading = true;
     private bool isSaving = false;
@@ -321,6 +392,12 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadProfile();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await LoadNotifStatusAsync();
+        StateHasChanged();
     }
 
     private async Task LoadProfile()
@@ -502,6 +579,101 @@
         mfaQrCode = null;
         mfaSecretKey = null;
     }
+    #region notification
+    private async Task LoadNotifStatusAsync()
+    {
+        try { _notifSupported = await JS.InvokeAsync<bool>("eval", "'Notification' in window && 'serviceWorker' in navigator"); }
+        catch { _notifSupported = false; }
+
+        if (!_notifSupported) return;
+
+        try { _notifPermission = await JS.InvokeAsync<string>("getNotificationPermission"); }
+        catch { _notifPermission = "default"; }
+
+        if (_notifPermission == "granted")
+        {
+            try
+            {
+                var status = await WorldBetApi.GetFromJsonAsync<NotifStatus>("notifications/status");
+                _notifSubscribed = status?.IsSubscribed ?? false;
+            }
+            catch { _notifSubscribed = false; }
+        }
+    }
+
+    private async Task HandleNotifToggle(bool value)
+    {
+        _notifLoading = true;
+        _notifMessage = null;
+
+        try
+        {
+            if (value)
+            {
+                var token      = await LocalStorage.GetItemAsync<string>("authToken");
+                var apiBaseUrl = await WorldBetApi.GetBaseUrlAsync();
+                var result     = await JS.InvokeAsync<SubscribeResult>("subscribeToPush", apiBaseUrl, token);
+
+                if (result.Success)
+                {
+                    _notifSubscribed  = true;
+                    _notifPermission  = "granted";
+                    _notifMessage     = "Notifications activées !";
+                    _notifError       = false;
+                }
+                else
+                {
+                    _notifPermission = await JS.InvokeAsync<string>("getNotificationPermission");
+                    _notifMessage    = result.Error ?? "Erreur lors de l'activation.";
+                    _notifError      = true;
+                }
+            }
+            else
+            {
+                await WorldBetApi.DeleteAsync("notifications/unsubscribe");
+                _notifSubscribed = false;
+                _notifMessage    = "Notifications désactivées.";
+                _notifError      = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _notifMessage = ex.Message;
+            _notifError   = true;
+        }
+        finally
+        {
+            _notifLoading = false;
+        }
+    }
+
+    private async Task SendTestNotifAsync()
+    {
+        _notifLoading = true;
+        _notifMessage = null;
+
+        try
+        {
+            var response = await WorldBetApi.PostAsync("notifications/test");
+            _notifMessage = response.IsSuccessStatusCode
+                ? "Notif envoyée ! Tu devrais la recevoir dans quelques secondes."
+                : $"Erreur {(int)response.StatusCode}";
+            _notifError = !response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _notifMessage = ex.Message;
+            _notifError   = true;
+        }
+        finally
+        {
+            _notifLoading = false;
+        }
+    }
+
+    private record NotifStatus(bool IsSubscribed);
+    private record SubscribeResult(bool Success, string? Error);
+    #endregion
 
     // ========== MFA DISABLE WORKFLOW ==========
     

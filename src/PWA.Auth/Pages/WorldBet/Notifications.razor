@@ -14,7 +14,8 @@
 else if (!_supported)
 {
     <MudAlert Severity="Severity.Warning">
-        Les notifications push ne sont pas supportées sur ce navigateur.
+        Les notifications push ne sont pas disponibles dans ce navigateur.<br />
+        Sur iPhone, installe l'app depuis Safari : <strong>Partager → Sur l'écran d'accueil</strong>, puis ouvre-la depuis l'icône.
     </MudAlert>
 }
 else
@@ -99,8 +100,17 @@ else
     {
         if (!firstRender) return;
 
-        _supported  = await JS.InvokeAsync<bool>("eval", "'Notification' in window && 'serviceWorker' in navigator");
-        _permission = await JS.InvokeAsync<string>("getNotificationPermission");
+        try
+        {
+            _supported = await JS.InvokeAsync<bool>("eval", "'Notification' in window && 'serviceWorker' in navigator");
+        }
+        catch { _supported = false; }
+
+        try
+        {
+            _permission = await JS.InvokeAsync<string>("getNotificationPermission");
+        }
+        catch { _permission = "default"; }
 
         if (_permission == "granted")
         {
