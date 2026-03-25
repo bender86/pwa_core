@@ -104,8 +104,15 @@ else
 
         if (_permission == "granted")
         {
-            var status = await WorldBetApi.GetFromJsonAsync<SubscriptionStatus>("notifications/status");
-            _subscribed = status?.IsSubscribed ?? false;
+            try
+            {
+                var status = await WorldBetApi.GetFromJsonAsync<SubscriptionStatus>("notifications/status");
+                _subscribed = status?.IsSubscribed ?? false;
+            }
+            catch
+            {
+                _subscribed = false;
+            }
         }
 
         _checking = false;
