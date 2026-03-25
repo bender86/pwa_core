@@ -24,58 +24,59 @@
     else
     {
         <!-- Statistics Cards -->
+        
         <MudGrid Class="mb-4">
             <MudItem xs="6" sm="3">
-                <MudPaper Elevation="2" Class="pa-4">
-                    <div class="d-flex align-items-center">
-                        <MudAvatar Color="Color.Primary" Size="Size.Large" Class="me-3">
+                <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
+                    <div class="stat-card">
+                        <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="stat-avatar">
                             <MudIcon Icon="@Icons.Material.Filled.Bolt" />
                         </MudAvatar>
-                        <div>
-                            <MudText Typo="Typo.h4">@pronostics.Count</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Pronostics</MudText>
+                        <div class="stat-text">
+                            <MudText Typo="Typo.h5">@pronostics.Count</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Pronostics</MudText>
                         </div>
                     </div>
                 </MudPaper>
             </MudItem>
 
             <MudItem xs="6" sm="3">
-                <MudPaper Elevation="2" Class="pa-4">
-                    <div class="d-flex align-items-center">
-                        <MudAvatar Color="Color.Success" Size="Size.Large" Class="me-3">
+                <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
+                    <div class="stat-card">
+                        <MudAvatar Color="Color.Success" Size="Size.Medium" Class="stat-avatar">
                             <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" />
                         </MudAvatar>
-                        <div>
-                            <MudText Typo="Typo.h4">@totalPoints</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Points</MudText>
+                        <div class="stat-text">
+                            <MudText Typo="Typo.h5">@totalPoints</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Points</MudText>
                         </div>
                     </div>
                 </MudPaper>
             </MudItem>
 
             <MudItem xs="6" sm="3">
-                <MudPaper Elevation="2" Class="pa-4">
-                    <div class="d-flex align-items-center">
-                        <MudAvatar Color="Color.Info" Size="Size.Large" Class="me-3">
+                <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
+                    <div class="stat-card">
+                        <MudAvatar Color="Color.Info" Size="Size.Medium" Class="stat-avatar">
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
                         </MudAvatar>
-                        <div>
-                            <MudText Typo="Typo.h4">@exactScores</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Scores exacts</MudText>
+                        <div class="stat-text">
+                            <MudText Typo="Typo.h5">@exactScores</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Scores exacts</MudText>
                         </div>
                     </div>
                 </MudPaper>
             </MudItem>
 
             <MudItem xs="6" sm="3">
-                <MudPaper Elevation="2" Class="pa-4">
-                    <div class="d-flex align-items-center">
-                        <MudAvatar Color="Color.Warning" Size="Size.Large" Class="me-3">
+                <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
+                    <div class="stat-card">
+                        <MudAvatar Color="Color.Warning" Size="Size.Medium" Class="stat-avatar">
                             <MudIcon Icon="@Icons.Material.Filled.Schedule" />
                         </MudAvatar>
-                        <div>
-                            <MudText Typo="Typo.h4">@pendingCount</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">En attente</MudText>
+                        <div class="stat-text">
+                            <MudText Typo="Typo.h5">@pendingCount</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">En attente</MudText>
                         </div>
                     </div>
                 </MudPaper>
@@ -168,10 +169,27 @@
 
     private bool isLoading = true;
 
-    // Filters
-    private string filterStatus = "";
-    private string filterPhase = "";
-    private bool showOnlyWithPoints = false;
+    // Filters — using properties with setters to trigger FilterPronostics() on change
+    private string _filterStatus = "";
+    private string filterStatus
+    {
+        get => _filterStatus;
+        set { _filterStatus = value; FilterPronostics(); }
+    }
+
+    private string _filterPhase = "";
+    private string filterPhase
+    {
+        get => _filterPhase;
+        set { _filterPhase = value; FilterPronostics(); }
+    }
+
+    private bool _showOnlyWithPoints = false;
+    private bool showOnlyWithPoints
+    {
+        get => _showOnlyWithPoints;
+        set { _showOnlyWithPoints = value; FilterPronostics(); }
+    }
 
     // Stats
     private int totalPoints = 0;
@@ -313,3 +331,25 @@
             && prono.PredictedScoreTeam2 == match.ScoreTeam2;
     }
 }
+
+<style>
+    .stat-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    @@media (min-width: 600px) {
+        .stat-card {
+            flex-direction: row;
+            text-align: left;
+        }
+
+        .stat-avatar {
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+    }
+</style>

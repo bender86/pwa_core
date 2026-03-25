@@ -30,6 +30,11 @@
             <i class="bi bi-pencil-square"></i>
             <span>Mes Pronostics</span>
         </NavLink>
+
+        <NavLink href="/worldbet/rules" class="nav-item" @onclick="HideMenu">
+            <i class="bi bi-shield-check"></i>
+            <span>Règlement</span>
+        </NavLink>
         
         <AuthorizeView Roles="Admin,SuperAdmin">
             <Authorized>

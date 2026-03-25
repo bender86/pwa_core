@@ -12,9 +12,6 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">🏆 Classement Général</MudText>
-    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-        Les meilleurs pronostiqueurs du tournoi
-    </MudText>
 
     @if (isLoading)
     {
@@ -31,52 +28,23 @@
         <!-- Podium (Top 3) -->
         @if (leaderboard.Count >= 3)
         {
-            <MudPaper Class="pa-6 mb-6" Elevation="3" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <MudPaper Class="pa-6 mb-6 d-none d-sm-block" Elevation="3" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                 <MudGrid Justify="Justify.Center" Spacing="3">
-                    <!-- 2nd Place -->
-                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
-                                 Size="Size.Large" 
-                                 Style="color: #c0c0c0; font-size: 3rem;" 
-                                 Class="mb-2" />
-                        <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px;">
-                            <MudAvatar Size="Size.Large" 
-                                      Color="Color.Secondary" 
-                                      Style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
-                                @GetInitials(leaderboard[1].DisplayName)
-                            </MudAvatar>
-                            <MudText Typo="Typo.h6" Class="mt-3 mb-2">
-                                <MudLink Href="@GetPlayerLink(leaderboard[1].PlayerId)" Color="Color.Dark">
-                                    @leaderboard[1].DisplayName
-                                </MudLink>
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.EmojiEvents">
-                                @leaderboard[1].TotalPoints pts
-                            </MudChip>
-                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Adjust" Color="Color.Success">
-                                @leaderboard[1].CorrectScores exacts
-                            </MudChip>
-                        </MudPaper>
-                        <MudPaper Class="pa-3 mt-2 text-center" 
-                                 Style="background: #c0c0c0; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
-                            2
-                        </MudPaper>
-                    </MudItem>
 
-                    <!-- 1st Place -->
-                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center" Style="order: -1;">
-                        <MudIcon Icon="@Icons.Material.Filled.Diamond" 
-                                 Size="Size.Large" 
-                                 Style="color: #ffd700; font-size: 3rem;" 
-                                 Class="mb-2 podium-crown" />
-                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
-                                 Size="Size.Large" 
-                                 Style="color: #ffd700; font-size: 3rem;" 
-                                 Class="mb-2" />
+                    <!-- 1st Place (center visually via order) -->
+                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center" Style="order: 2;">
+                        <MudIcon Icon="@Icons.Material.Filled.Diamond"
+                                Size="Size.Large"
+                                Style="color: #ffd700; font-size: 3rem;"
+                                Class="mb-2 podium-crown" />
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents"
+                                Size="Size.Large"
+                                Style="color: #ffd700; font-size: 3rem;"
+                                Class="mb-2" />
                         <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px; border: 4px solid #ffd700;">
-                            <MudAvatar Size="Size.Large" 
-                                      Color="Color.Warning" 
-                                      Style="width: 100px; height: 100px; font-size: 2rem; margin: 0 auto; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
+                            <MudAvatar Size="Size.Large"
+                                    Color="Color.Warning"
+                                    Style="width: 100px; height: 100px; font-size: 2rem; margin: 0 auto; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
                                 @GetInitials(leaderboard[0].DisplayName)
                             </MudAvatar>
                             <MudText Typo="Typo.h5" Class="mt-3 mb-2">
@@ -91,22 +59,52 @@
                                 @leaderboard[0].CorrectScores exacts
                             </MudChip>
                         </MudPaper>
-                        <MudPaper Class="pa-4 mt-2 text-center" 
-                                 Style="background: #ffd700; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
+                        <MudPaper Class="pa-4 mt-2 text-center"
+                                Style="background: #ffd700; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
                             1
                         </MudPaper>
                     </MudItem>
 
-                    <!-- 3rd Place -->
-                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" 
-                                 Size="Size.Large" 
-                                 Style="color: #cd7f32; font-size: 3rem;" 
-                                 Class="mb-2" />
+                    <!-- 2nd Place (left visually) -->
+                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center" Style="order: 1;">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents"
+                                Size="Size.Large"
+                                Style="color: #c0c0c0; font-size: 3rem;"
+                                Class="mb-2" />
                         <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px;">
-                            <MudAvatar Size="Size.Large" 
-                                      Color="Color.Default" 
-                                      Style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
+                            <MudAvatar Size="Size.Large"
+                                    Color="Color.Secondary"
+                                    Style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
+                                @GetInitials(leaderboard[1].DisplayName)
+                            </MudAvatar>
+                            <MudText Typo="Typo.h6" Class="mt-3 mb-2">
+                                <MudLink Href="@GetPlayerLink(leaderboard[1].PlayerId)" Color="Color.Dark">
+                                    @leaderboard[1].DisplayName
+                                </MudLink>
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.EmojiEvents">
+                                @leaderboard[1].TotalPoints pts
+                            </MudChip>
+                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Adjust" Color="Color.Success">
+                                @leaderboard[1].CorrectScores exacts
+                            </MudChip>
+                        </MudPaper>
+                        <MudPaper Class="pa-3 mt-2 text-center"
+                                Style="background: #c0c0c0; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
+                            2
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- 3rd Place (right visually) -->
+                    <MudItem xs="12" sm="4" Class="d-flex flex-column align-center" Style="order: 3;">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents"
+                                Size="Size.Large"
+                                Style="color: #cd7f32; font-size: 3rem;"
+                                Class="mb-2" />
+                        <MudPaper Class="pa-4 text-center" Style="width: 100%; max-width: 280px;">
+                            <MudAvatar Size="Size.Large"
+                                    Color="Color.Default"
+                                    Style="width: 80px; height: 80px; font-size: 1.5rem; margin: 0 auto;">
                                 @GetInitials(leaderboard[2].DisplayName)
                             </MudAvatar>
                             <MudText Typo="Typo.h6" Class="mt-3 mb-2">
@@ -121,11 +119,12 @@
                                 @leaderboard[2].CorrectScores exacts
                             </MudChip>
                         </MudPaper>
-                        <MudPaper Class="pa-3 mt-2 text-center" 
-                                 Style="background: #cd7f32; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
+                        <MudPaper Class="pa-3 mt-2 text-center"
+                                Style="background: #cd7f32; width: 100%; max-width: 280px; font-weight: bold; font-size: 1.5rem;">
                             3
                         </MudPaper>
                     </MudItem>
+
                 </MudGrid>
             </MudPaper>
         }

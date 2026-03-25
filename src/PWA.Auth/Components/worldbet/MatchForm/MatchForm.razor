@@ -199,6 +199,55 @@
             </MudSelect>
         </MudItem>
         
+        @* Finished Type — visible only when match is Finished *@
+        @if (Model.Status == MatchStatus.Finished)
+        {
+            <MudItem xs="12" md="6">
+                <MudSelect T="MatchFinishedType?"
+                        @bind-Value="Model.FinishedType"
+                        Label="Fin du match"
+                        Variant="Variant.Outlined"
+                        Disabled="@IsLoading"
+                        Clearable="true"
+                        AdornmentIcon="@Icons.Material.Filled.Timer"
+                        AdornmentColor="Color.Info"
+                        HelperText="Comment le match s'est terminé ?">
+                    <MudSelectItem T="MatchFinishedType?" Value="@MatchFinishedType.RegularTime">
+                        ⏱️ Temps réglementaire (90')
+                    </MudSelectItem>
+                    <MudSelectItem T="MatchFinishedType?" Value="@MatchFinishedType.ExtraTime">
+                        ⏰ Prolongations (120')
+                    </MudSelectItem>
+                    <MudSelectItem T="MatchFinishedType?" Value="@MatchFinishedType.Penalties">
+                        🎯 Tirs au but
+                    </MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            @* Penalty Winner — visible only when FinishedType == Penalties *@
+            @if (Model.FinishedType == MatchFinishedType.Penalties)
+            {
+                <MudItem xs="12" md="6">
+                    <MudSelect T="int?"
+                            @bind-Value="Model.PenaltyWinnerTeam"
+                            Label="Vainqueur aux tirs au but"
+                            Variant="Variant.Outlined"
+                            Disabled="@IsLoading"
+                            Clearable="true"
+                            AdornmentIcon="@Icons.Material.Filled.EmojiEvents"
+                            AdornmentColor="Color.Warning"
+                            HelperText="Quelle équipe a gagné aux penalties ?">
+                        <MudSelectItem T="int?" Value="@((int?)1)">
+                            🏆 @(GetTeamName(Model.Team1Id))
+                        </MudSelectItem>
+                        <MudSelectItem T="int?" Value="@((int?)2)">
+                            🏆 @(GetTeamName(Model.Team2Id))
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            }
+        }
+        
         <!-- Lock Pronostics -->
         <MudItem xs="12" md="6">
             <MudDatePicker @bind-Date="lockDate"
@@ -380,4 +429,8 @@
         MatchStatus.Postponed => Color.Warning,
         _ => Color.Default
     };
+    private string GetTeamName(int teamId)
+{
+    return Teams.FirstOrDefault(t => t.TeamId == teamId)?.Name ?? "Équipe inconnue";
+}
 }

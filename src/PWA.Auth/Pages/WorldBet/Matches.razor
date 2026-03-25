@@ -165,15 +165,28 @@
                 </TemplateColumn>
 
                 <!-- Score -->
+                
                 <TemplateColumn Title="Score" Sortable="false">
                     <CellTemplate>
                         <div class="d-flex align-items-center gap-2">
                             @if (context.Item.ScoreTeam1.HasValue && context.Item.ScoreTeam2.HasValue)
                             {
-                                <MudChip T="string" Color="Color.Success" Size="Size.Medium">
-                                    <strong>@context.Item.ScoreTeam1 - @context.Item.ScoreTeam2</strong>
-                                </MudChip>
-                                
+                                <div class="d-flex flex-column align-items-center">
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Medium">
+                                        <strong>@context.Item.ScoreTeam1 - @context.Item.ScoreTeam2</strong>
+                                    </MudChip>
+                                    @if (context.Item.FinishedType == MatchFinishedType.ExtraTime)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Info">a.p.</MudText>
+                                    }
+                                    else if (context.Item.FinishedType == MatchFinishedType.Penalties)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Warning">
+                                            t.a.b. (@GetPenaltyWinnerName(context.Item))
+                                        </MudText>
+                                    }
+                                </div>
+
                                 @if (isAdmin)
                                 {
                                     <CalculateButton 
@@ -460,7 +473,9 @@
             ScoreTeam1 = match.ScoreTeam1,
             ScoreTeam2 = match.ScoreTeam2,
             Status = match.Status,
-            LockPronosticsAt = match.LockPronosticsAt
+            LockPronosticsAt = match.LockPronosticsAt,
+            FinishedType = currentRequest.FinishedType,
+            PenaltyWinnerTeam = currentRequest.PenaltyWinnerTeam
         };
         currentMatchId = match.MatchId;
         isEditMode = true;
@@ -493,7 +508,9 @@
                     ScoreTeam1 = currentRequest.ScoreTeam1,
                     ScoreTeam2 = currentRequest.ScoreTeam2,
                     Status = currentRequest.Status,
-                    LockPronosticsAt = currentRequest.LockPronosticsAt
+                    LockPronosticsAt = currentRequest.LockPronosticsAt,
+                    FinishedType = currentRequest.FinishedType,
+                    PenaltyWinnerTeam = currentRequest.PenaltyWinnerTeam
                 };
                 
                 await TournamentService.UpdateMatchAsync(currentMatchId, updateRequest);
@@ -591,6 +608,12 @@
         MatchStatus.Finished => "Terminé",
         MatchStatus.Postponed => "Reporté",
         _ => status.ToString()
+    };
+    private string GetPenaltyWinnerName(MatchDto match) => match.PenaltyWinnerTeam switch
+    {
+        1 => match.Team1Name,
+        2 => match.Team2Name,
+        _ => "?"
     };
 }
 
