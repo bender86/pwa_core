@@ -3,8 +3,6 @@
 
 <head>
     <style>
-        /* ... votre CSS existant ... */
-
         /* Fix z-index pour les dialogs MudBlazor */
         .mud-dialog-container {
             z-index: 1300 !important;
@@ -23,28 +21,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WorldBet 2026</title>
     <base href="/" />
-    <!-- Favicon pour navigateurs -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <!-- Icones PWA pour installation mobile -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-    
-    <!-- Icone iOS -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <!-- Configuration iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="WorldBet">
-    <!-- MudBlazor - AJOUTEZ CES LIGNES -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-    <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
-    <!-- Theme color -->
     <meta name="theme-color" content="#0d6efd">
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
@@ -54,25 +43,82 @@
 
 <body>
     <script>
-        window.initializeCarousel = function(carouselId) {
-            const carouselElement = document.getElementById(carouselId);
-            if (carouselElement && typeof bootstrap !== 'undefined') {
-                // Dispose existing instance if any
-                const existingCarousel = bootstrap.Carousel.getInstance(carouselElement);
-                if (existingCarousel) {
-                    existingCarousel.dispose();
-                }
-                
-                // Initialize new carousel
-                new bootstrap.Carousel(carouselElement, {
-                    interval: 5000,
-                    wrap: true,
-                    keyboard: true,
-                    touch: true
-                });
+        // ─── Carousel ───────────────────────────────────────────────
+        window.initializeCarousel = function (carouselId) {
+            const el = document.getElementById(carouselId);
+            if (el && typeof bootstrap !== 'undefined') {
+                const existing = bootstrap.Carousel.getInstance(el);
+                if (existing) existing.dispose();
+                new bootstrap.Carousel(el, { interval: 5000, wrap: true, keyboard: true, touch: true });
             }
         };
+
+        // ─── Push notifications ──────────────────────────────────────
+
+        const VAPID_PUBLIC_KEY = 'BFZ43c7kBudUt4J6pno9JnCPzGfvy1axnPLXc44I5JId5939awG0Rr-CD3zPWpF51DpCRXOb6G34I0o0G-HX7io';
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+        }
+
+        // Called from Blazor to request permission and subscribe
+        window.subscribeToPush = async function (apiBaseUrl, bearerToken) {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                return { success: false, error: 'Push not supported on this browser.' };
+            }
+
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                return { success: false, error: 'Permission denied.' };
+            }
+
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+
+                const key  = subscription.getKey('p256dh');
+                const auth = subscription.getKey('auth');
+
+                const dto = {
+                    endpoint: subscription.endpoint,
+                    p256DH:   btoa(String.fromCharCode(...new Uint8Array(key))),
+                    auth:     btoa(String.fromCharCode(...new Uint8Array(auth)))
+                };
+
+                const response = await fetch(`${apiBaseUrl}/api/notifications/subscribe`, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type':  'application/json',
+                        'Authorization': `Bearer ${bearerToken}`
+                    },
+                    body: JSON.stringify(dto)
+                });
+
+                return { success: response.ok };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        };
+
+        // Called from Blazor to check current permission status
+        window.getNotificationPermission = function () {
+            return Notification.permission; // 'granted' | 'denied' | 'default'
+        };
+
+        // ─── Service Worker registration ─────────────────────────────
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service worker registered:', reg.scope))
+                .catch(err => console.error('Service worker registration failed:', err));
+        }
     </script>
+
     <div id="app">
         <svg class="loading-progress">
             <circle r="40%" cx="50%" cy="50%" />
@@ -87,7 +133,6 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
-    <!-- MudBlazor JS - AJOUTEZ CETTE LIGNE -->
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>
 

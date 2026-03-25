@@ -1,0 +1,195 @@
+@* Pages/WorldBet/Notifications.razor *@
+@page "/worldbet/notifications"
+@layout WorldBetLayout
+@inject IJSRuntime JS
+@inject IConfiguration Config
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<MudText Typo="Typo.h5" Class="mb-4">Notifications</MudText>
+
+@if (_checking)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (!_supported)
+{
+    <MudAlert Severity="Severity.Warning">
+        Les notifications push ne sont pas supportées sur ce navigateur.
+    </MudAlert>
+}
+else
+{
+    <MudCard>
+        <MudCardContent>
+            @if (_permission == "granted" && _subscribed)
+            {
+                <MudAlert Severity="Severity.Success" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Class="mr-2" />
+                    Notifications activées — tu recevras un rappel 1h avant chaque match non pronostiqué.
+                </MudAlert>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.NotificationsOff"
+                           OnClick="UnsubscribeAsync"
+                           Disabled="_loading">
+                    Désactiver les notifications
+                </MudButton>
+            }
+            else if (_permission == "denied")
+            {
+                <MudAlert Severity="Severity.Error">
+                    Tu as refusé les notifications. Pour les réactiver, modifie les permissions
+                    dans les réglages de ton navigateur ou de ton téléphone.
+                </MudAlert>
+            }
+            else
+            {
+                <MudText Class="mb-4">
+                    Reçois un rappel automatique <strong>1 heure avant</strong> chaque match
+                    pour lequel tu n'as pas encore fait de pronostic.
+                </MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Notifications"
+                           OnClick="SubscribeAsync"
+                           Disabled="_loading">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Activer les notifications
+                </MudButton>
+            }
+
+            @if (_subscribed)
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Send"
+                           OnClick="SendTestAsync"
+                           Disabled="_loading"
+                           Class="mt-3">
+                    Envoyer une notif de test
+                </MudButton>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+            }
+
+            @if (!string.IsNullOrEmpty(_success))
+            {
+                <MudAlert Severity="Severity.Success" Class="mt-3">@_success</MudAlert>
+            }
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    private bool _checking  = true;
+    private bool _supported = false;
+    private bool _subscribed = false;
+    private bool _loading   = false;
+    private string _permission = "default";
+    private string? _error;
+    private string? _success;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _supported  = await JS.InvokeAsync<bool>("eval", "'Notification' in window && 'serviceWorker' in navigator");
+        _permission = await JS.InvokeAsync<string>("getNotificationPermission");
+
+        if (_permission == "granted")
+        {
+            var status = await Http.GetFromJsonAsync<SubscriptionStatus>("api/notifications/status");
+            _subscribed = status?.IsSubscribed ?? false;
+        }
+
+        _checking = false;
+        StateHasChanged();
+    }
+
+    private async Task SubscribeAsync()
+    {
+        _loading = true;
+        _error   = null;
+
+        try
+        {
+            var token      = await LocalStorage.GetItemAsync<string>("authToken");
+            var apiBaseUrl = Config["ApiBaseUrl"] ?? string.Empty;
+
+            var result = await JS.InvokeAsync<SubscribeResult>("subscribeToPush", apiBaseUrl, token);
+
+            if (result.Success)
+            {
+                _permission = "granted";
+                _subscribed = true;
+            }
+            else
+            {
+                _permission = await JS.InvokeAsync<string>("getNotificationPermission");
+                _error = result.Error ?? "Une erreur est survenue.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SendTestAsync()
+    {
+        _loading = true;
+        _error   = null;
+        _success = null;
+
+        try
+        {
+            var response = await Http.PostAsync("api/notifications/test", null);
+            if (response.IsSuccessStatusCode)
+                _success = "Notif envoyée ! Tu devrais la recevoir dans quelques secondes.";
+            else
+                _error = $"Erreur {(int)response.StatusCode} — vérifie les logs de l'API.";
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UnsubscribeAsync()
+    {
+        _loading = true;
+        _error   = null;
+
+        try
+        {
+            await Http.DeleteAsync("api/notifications/unsubscribe");
+            _subscribed = false;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private record SubscriptionStatus(bool IsSubscribed);
+    private record SubscribeResult(bool Success, string? Error);
+}
