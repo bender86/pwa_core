@@ -126,6 +126,13 @@
             {
                 Console.WriteLine($"  ✅ {app.DisplayName} - {app.AppUrl}");
             }
+            // Auto-redirect if the user only has access to one app
+            if (availableApps.Count == 1)
+            {
+                Console.WriteLine($"🚀 Single app detected, redirecting to {availableApps[0].DisplayName}");
+                NavigateToApp(availableApps[0]);
+                return;
+            }
         }
         catch (Exception ex)
         {
