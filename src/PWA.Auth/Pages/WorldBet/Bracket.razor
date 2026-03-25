@@ -1,0 +1,377 @@
+@page "/worldbet/bracket"
+@using dto.worldbet.Models
+@using dto.worldbet.Enums
+@layout WorldBetLayout
+@inject ITournamentService TournamentService
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Tableau final — WorldBet 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 px-2">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="me-2" />
+        Tableau de la phase finale
+    </MudText>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else
+    {
+        <div class="bracket-scroll">
+            <div class="bracket">
+                @foreach (var round in rounds)
+                {
+                    <div class="bracket-round">
+                        <div class="round-title">@round.Label</div>
+                        <div class="round-matches" style="--match-count: @round.Matches.Count;">
+                            @foreach (var match in round.Matches)
+                            {
+                                <div class="bracket-match-wrap">
+                                    <div class="bracket-match @(match.MatchId.HasValue ? "has-data" : "")">
+                                        <div class="bracket-team @(IsWinner(match, 1) ? "winner" : "") @(match.Team1Name == null ? "tbd" : "")">
+                                            <span class="team-name">@(match.Team1Name ?? "À déterminer")</span>
+                                            @if (match.ScoreTeam1.HasValue)
+                                            {
+                                                <span class="team-score">@match.ScoreTeam1</span>
+                                            }
+                                        </div>
+                                        <div class="bracket-team @(IsWinner(match, 2) ? "winner" : "") @(match.Team2Name == null ? "tbd" : "")">
+                                            <span class="team-name">@(match.Team2Name ?? "À déterminer")</span>
+                                            @if (match.ScoreTeam2.HasValue)
+                                            {
+                                                <span class="team-score">@match.ScoreTeam2</span>
+                                            }
+                                        </div>
+                                        @if (match.FinishedType.HasValue && match.FinishedType != MatchFinishedType.RegularTime)
+                                        {
+                                            <div class="match-extra">
+                                                @(match.FinishedType == MatchFinishedType.ExtraTime ? "a.p." : $"t.a.b.")
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="bracket-connector"></div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- Champion -->
+                <div class="bracket-champion">
+                    <div class="champion-icon">🏆</div>
+                    <div class="champion-label">Champion</div>
+                    <div class="champion-name">@(champion ?? "À déterminer")</div>
+                </div>
+            </div>
+        </div>
+    }
+</MudContainer>
+
+<style>
+    .bracket-scroll {
+        overflow-x: auto;
+        overflow-y: visible;
+        padding-bottom: 1rem;
+    }
+
+    .bracket {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        min-width: 1200px;
+        min-height: 700px;
+        padding: 1rem 0.5rem;
+    }
+
+    .bracket-round {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 140px;
+    }
+
+    .round-title {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        padding: 0 4px 8px;
+        border-bottom: 1px solid var(--mud-palette-divider);
+        margin-bottom: 8px;
+        white-space: nowrap;
+    }
+
+    .round-matches {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        justify-content: space-around;
+    }
+
+    .bracket-match-wrap {
+        display: flex;
+        align-items: center;
+        padding: 4px 0;
+    }
+
+    .bracket-match {
+        width: 130px;
+        flex-shrink: 0;
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--mud-palette-surface);
+        position: relative;
+    }
+
+    .bracket-match.has-data {
+        border-color: var(--mud-palette-primary-lighten);
+    }
+
+    .bracket-team {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 8px;
+        font-size: 11px;
+        min-height: 24px;
+        color: var(--mud-palette-text-primary);
+    }
+
+    .bracket-team:first-child {
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+
+    .bracket-team.tbd {
+        color: var(--mud-palette-text-disabled);
+        font-style: italic;
+    }
+
+    .bracket-team.winner {
+        background: var(--mud-palette-success-lighten);
+        font-weight: 600;
+    }
+
+    .bracket-team.winner .team-name {
+        color: var(--mud-palette-success-darken);
+    }
+
+    .team-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 90px;
+    }
+
+    .team-score {
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--mud-palette-background-grey);
+        border-radius: 3px;
+        padding: 0 4px;
+        min-width: 18px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .match-extra {
+        font-size: 9px;
+        color: var(--mud-palette-info);
+        text-align: center;
+        padding: 2px 0;
+        border-top: 1px solid var(--mud-palette-divider);
+        background: var(--mud-palette-info-lighten);
+    }
+
+    .bracket-connector {
+        width: 20px;
+        flex-shrink: 0;
+    }
+
+    .bracket-champion {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 90px;
+        padding: 0 8px;
+    }
+
+    .champion-icon {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+
+    .champion-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .champion-name {
+        font-size: 12px;
+        font-style: italic;
+        color: var(--mud-palette-text-disabled);
+        text-align: center;
+        margin-top: 4px;
+    }
+
+    .champion-name.known {
+        font-style: normal;
+        font-weight: 600;
+        color: var(--mud-palette-warning-darken);
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private List<BracketRound> rounds = new();
+    private string? champion;
+
+    // Phase names as stored in DB — adjust to match your MatchPhase.Name values
+    private static readonly string[] KnockoutPhaseNames =
+    [
+        "Seizièmes de finale",
+        "Huitièmes de finale",
+        "Quarts de finale",
+        "Demi-finales",
+        "Finale"
+    ];
+
+    // Fixed structure for 1/32 — displayed even without DB data
+    private static readonly (string Team1, string Team2)[] R32Structure =
+    [
+        ("1A", "Meill. 3e"), ("2B", "2C"),     ("1C", "Meill. 3e"), ("2A", "2B"),
+        ("1B", "Meill. 3e"), ("2D", "2E"),     ("1E", "Meill. 3e"), ("2F", "2G"),
+        ("1G", "Meill. 3e"), ("2H", "2I"),     ("1I", "Meill. 3e"), ("2J", "2K"),
+        ("1K", "Meill. 3e"), ("2L", "2A"),     ("1D", "Meill. 3e"), ("1F", "Meill. 3e"),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBracket();
+    }
+
+    private async Task LoadBracket()
+    {
+        isLoading = true;
+        try
+        {
+            var allMatches = await TournamentService.GetAllMatchesAsync();
+
+            // Group knockout matches by phase
+            var knockoutByPhase = allMatches
+                .Where(m => KnockoutPhaseNames.Contains(m.PhaseName))
+                .GroupBy(m => m.PhaseName)
+                .ToDictionary(g => g.Key, g => g.OrderBy(m => m.MatchNumber).ToList());
+
+            rounds = BuildRounds(knockoutByPhase);
+
+            // Champion = winner of the final
+            var final = knockoutByPhase.GetValueOrDefault("Finale")?.FirstOrDefault();
+            if (final?.Status == MatchStatus.Finished && final.ScoreTeam1.HasValue && final.ScoreTeam2.HasValue)
+            {
+                champion = final.ScoreTeam1 > final.ScoreTeam2
+                    ? final.Team1Name
+                    : final.ScoreTeam2 > final.ScoreTeam1
+                        ? final.Team2Name
+                        : GetPenaltyWinner(final);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement : {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<BracketRound> BuildRounds(Dictionary<string, List<MatchDto>> byPhase)
+    {
+        var result = new List<BracketRound>();
+
+        // Round of 32 — use fixed structure, overlay with DB data if available
+        var r32Matches = byPhase.GetValueOrDefault("Seizièmes de finale") ?? new();
+        var r32 = new BracketRound { Label = "Seizièmes" };
+
+        for (int i = 0; i < R32Structure.Length; i++)
+        {
+            var dbMatch = r32Matches.ElementAtOrDefault(i);
+            r32.Matches.Add(dbMatch != null
+                ? ToBracketMatch(dbMatch)
+                : new BracketMatch { Team1Name = R32Structure[i].Team1, Team2Name = R32Structure[i].Team2 });
+        }
+        result.Add(r32);
+
+        // Remaining rounds
+        var phaseLabels = new Dictionary<string, string>
+        {
+            ["Huitièmes de finale"] = "Huitièmes",
+            ["Quarts de finale"]    = "Quarts",
+            ["Demi-finales"]        = "Demi-finales",
+            ["Finale"]              = "Finale",
+        };
+
+        foreach (var (phaseName, label) in phaseLabels)
+        {
+            var dbMatches = byPhase.GetValueOrDefault(phaseName) ?? new();
+            int expectedCount = phaseName switch
+            {
+                "Huitièmes de finale" => 8,
+                "Quarts de finale"    => 4,
+                "Demi-finales"        => 2,
+                "Finale"              => 1,
+                _                     => 0
+            };
+
+            var round = new BracketRound { Label = label };
+
+            for (int i = 0; i < expectedCount; i++)
+            {
+                var dbMatch = dbMatches.ElementAtOrDefault(i);
+                round.Matches.Add(dbMatch != null
+                    ? ToBracketMatch(dbMatch)
+                    : new BracketMatch());
+            }
+            result.Add(round);
+        }
+
+        return result;
+    }
+
+    private static BracketMatch ToBracketMatch(MatchDto m) => new()
+    {
+        MatchId      = m.MatchId,
+        Team1Name    = m.Team1Name,
+        Team2Name    = m.Team2Name,
+        ScoreTeam1   = m.ScoreTeam1,
+        ScoreTeam2   = m.ScoreTeam2,
+        Status       = m.Status,
+        FinishedType = m.FinishedType,
+        PenaltyWinnerTeam = m.PenaltyWinnerTeam
+    };
+
+    private static bool IsWinner(BracketMatch match, int team)
+    {
+        if (match.Status != MatchStatus.Finished) return false;
+        if (!match.ScoreTeam1.HasValue || !match.ScoreTeam2.HasValue) return false;
+
+        if (team == 1) return match.ScoreTeam1 > match.ScoreTeam2
+            || (match.ScoreTeam1 == match.ScoreTeam2 && match.PenaltyWinnerTeam == 1);
+
+        return match.ScoreTeam2 > match.ScoreTeam1
+            || (match.ScoreTeam1 == match.ScoreTeam2 && match.PenaltyWinnerTeam == 2);
+    }
+
+    private static string? GetPenaltyWinner(MatchDto match) => match.PenaltyWinnerTeam switch
+    {
+        1 => match.Team1Name,
+        2 => match.Team2Name,
+        _ => null
+    };
+}

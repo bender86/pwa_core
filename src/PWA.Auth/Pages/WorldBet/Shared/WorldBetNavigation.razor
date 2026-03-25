@@ -16,10 +16,31 @@
             <span>Matches</span>
         </NavLink>
         
-        <NavLink href="/worldbet/groups" class="nav-item" @onclick="HideMenu">
-            <i class="bi bi-grid-3x3"></i>
-            <span>Poules</span>
-        </NavLink>
+        <MudMenu AnchorOrigin="Origin.BottomCenter"
+                TransformOrigin="Origin.TopCenter"
+                Class="nav-mud-menu">
+            <ActivatorContent>
+                <div class="nav-item">
+                    <i class="bi bi-grid-3x3"></i>
+                    <span>Tournoi</span>
+                    <i class="bi bi-chevron-down" style="font-size: 0.6rem;"></i>
+                </div>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Href="/worldbet/groups" @onclick="HideMenu">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-grid-3x3"></i>
+                        <span>Poules</span>
+                    </div>
+                </MudMenuItem>
+                <MudMenuItem Href="/worldbet/bracket" @onclick="HideMenu">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-diagram-3-fill"></i>
+                        <span>Tableau final</span>
+                    </div>
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
         
         <NavLink href="/worldbet/leaderboard" class="nav-item" @onclick="HideMenu">
             <i class="bi bi-trophy-fill"></i>
@@ -55,6 +76,8 @@
 
 @code {
     private bool showMobileMenu = false;
+
+
     
     private void ToggleMenu()
     {
@@ -72,7 +95,13 @@
         position: relative;
         background: #f8f9fa;
         border-bottom: 2px solid #dee2e6;
+        overflow: visible;
     }
+    @@media (min-width: 768px) {
+    .worldbet-nav {
+        overflow: visible; /* remplace overflow-x: auto par overflow: visible */
+    }
+}
     
     /* Bouton burger mobile */
     .menu-toggle {
