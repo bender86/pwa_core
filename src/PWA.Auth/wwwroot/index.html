@@ -91,7 +91,7 @@
                     auth:     btoa(String.fromCharCode(...new Uint8Array(auth)))
                 };
 
-                const response = await fetch(`${apiBaseUrl}/api/notifications/subscribe`, {
+                const response = await fetch(`${apiBaseUrl}/notifications/subscribe`, {
                     method:  'POST',
                     headers: {
                         'Content-Type':  'application/json',
