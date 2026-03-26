@@ -3,172 +3,222 @@
 @using dto.worldbet.Models
 @using dto.worldbet.Enums
 
-<div class="card mb-3 shadow-sm">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <h6 class="card-subtitle text-muted mb-0">@Match.PhaseName - @(Match.GroupLetter ?? "")</h6>
-            <span class="badge @GetStatusBadgeClass()">@GetStatusText()</span>
-        </div>
+<MudPaper Elevation="2" Class="mb-3" Style="overflow: hidden;">
 
-        <div class="row align-items-center my-3">
-            <div class="col-5 text-center">
-                <strong>@Match.Team1Name</strong>
-                @if (Match.ScoreTeam1.HasValue)
-                {
-                    <div class="display-6 fw-bold text-primary mt-2">@Match.ScoreTeam1</div>
-                }
-            </div>
-
-            <div class="col-2 text-center">
-                <div class="fw-bold text-muted">VS</div>
-            </div>
-
-            <div class="col-5 text-center">
-                <strong>@Match.Team2Name</strong>
-                @if (Match.ScoreTeam2.HasValue)
-                {
-                    <div class="display-6 fw-bold text-primary mt-2">@Match.ScoreTeam2</div>
-                }
-            </div>
-        </div>
-
-        <div class="text-center mb-2">
-            <small class="text-muted">
-                <i class="bi bi-calendar-event"></i> @Match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
-            </small>
-        </div>
-
-        <div class="text-center mb-3">
-            <small class="text-muted">
-                <i class="bi bi-lock"></i> Verrouillage : @Match.LockPronosticsAt.ToString("dd/MM/yyyy HH:mm")
-            </small>
-        </div>
-
-        @if (HasPronostic && UserPronostic != null)
-        {
-            <div class="alert alert-info mb-3">
-                <div class="row text-center">
-                    <div class="col-5">
-                        <strong>Votre pronostic</strong>
-                        <div class="display-6">@UserPronostic.PredictedScoreTeam1</div>
-                    </div>
-                    <div class="col-2">
-                        <div class="mt-3">-</div>
-                    </div>
-                    <div class="col-5">
-                        <strong>&nbsp;</strong>
-                        <div class="display-6">@UserPronostic.PredictedScoreTeam2</div>
-                    </div>
-                </div>
-                @if (UserPronostic.PointsEarned >= 0)
-                {
-                    <div class="text-center mt-2">
-                        <span class="badge bg-success">+@UserPronostic.PointsEarned points</span>
-                    </div>
-                }
-            </div>
-        }
-
-        @* Boutons d'action *@
-        <div class="d-flex justify-content-center gap-2">
-            @* Bouton Voir les pronostics (seulement pour matches terminés ou en cours) *@
-            @if (Match.Status == MatchStatus.Live || Match.Status == MatchStatus.Finished)
+    @* Header *@
+    <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
+        <div class="d-flex align-items-center gap-2">
+            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                @Match.PhaseName
+            </MudChip>
+            @if (!string.IsNullOrEmpty(Match.GroupLetter))
             {
-                <ViewPronosticsButton 
-                    MatchId="@Match.MatchId"
-                    Status="@Match.Status"
-                    ButtonText="Voir les pronos" />
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                    Groupe @Match.GroupLetter
+                </MudChip>
             }
-            
-            @* Bouton pour faire un pronostic *@
-            <PronosticButton Match="@Match" 
-                           HasPronostic="@HasPronostic" 
-                           OnPronosticSaved="@HandlePronosticSaved"
-                           OnModalOpened="@NotifyModalOpened"
-                           OnModalClosed="@NotifyModalClosed"
-                           Size="Small" />
+        </div>
+        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor()" Variant="Variant.Filled">
+            @GetStatusText()
+        </MudChip>
+    </div>
+
+    <MudDivider />
+
+    @* Teams & Score *@
+    <div class="match-teams-row px-3 py-3">
+        @* Team 1 *@
+        <div class="team-block">
+            @if (!string.IsNullOrEmpty(Match.FlagUrlTeam1))
+            {
+                <img src="@Match.FlagUrlTeam1" alt="@Match.Team1Name"
+                     class="team-flag" />
+            }
+            <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
+                @Match.Team1Name
+            </MudText>
+            @if (Match.ScoreTeam1.HasValue)
+            {
+                <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">
+                    @Match.ScoreTeam1
+                </MudText>
+            }
+        </div>
+
+        @* VS / Score separator *@
+        <div class="score-separator">
+            @if (Match.ScoreTeam1.HasValue && Match.ScoreTeam2.HasValue)
+            {
+                <MudText Typo="Typo.h5" Color="Color.Secondary">-</MudText>
+                @if (Match.FinishedType == MatchFinishedType.ExtraTime)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Info">a.p.</MudText>
+                }
+                else if (Match.FinishedType == MatchFinishedType.Penalties)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Warning">t.a.b.</MudText>
+                }
+            }
+            else
+            {
+                <MudText Typo="Typo.h6" Color="Color.Secondary">VS</MudText>
+            }
+        </div>
+
+        @* Team 2 *@
+        <div class="team-block">
+            @if (!string.IsNullOrEmpty(Match.FlagUrlTeam2))
+            {
+                <img src="@Match.FlagUrlTeam2" alt="@Match.Team2Name"
+                     class="team-flag" />
+            }
+            <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
+                @Match.Team2Name
+            </MudText>
+            @if (Match.ScoreTeam2.HasValue)
+            {
+                <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">
+                    @Match.ScoreTeam2
+                </MudText>
+            }
         </div>
     </div>
-</div>
+
+    @* Date & Lock *@
+    <div class="px-3 pb-2 d-flex justify-content-center gap-4">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="me-1" />
+            @Match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
+        </MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="me-1" />
+            @Match.LockPronosticsAt.ToString("dd/MM HH:mm")
+        </MudText>
+    </div>
+
+    @* Pronostic de l'utilisateur *@
+    @if (HasPronostic && UserPronostic != null)
+    {
+        <MudDivider />
+        <div class="px-3 py-2" style="background: var(--mud-palette-info-lighten);">
+            <div class="d-flex align-items-center justify-content-center gap-3">
+                <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Warning" Size="Size.Small" />
+                <MudText Typo="Typo.body2">
+                    Mon prono :
+                    <strong>@UserPronostic.PredictedScoreTeam1 - @UserPronostic.PredictedScoreTeam2</strong>
+                </MudText>
+                @if (Match.Status == MatchStatus.Finished && UserPronostic.PointsEarned >= 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="@GetPointsColor(UserPronostic.PointsEarned)">
+                        +@UserPronostic.PointsEarned pts
+                    </MudChip>
+                }
+            </div>
+        </div>
+    }
+
+    @* Actions *@
+    <MudDivider />
+    <div class="d-flex justify-content-center gap-2 px-3 py-2">
+        @if (Match.Status == MatchStatus.Live || Match.Status == MatchStatus.Finished)
+        {
+            <ViewPronosticsButton
+                MatchId="@Match.MatchId"
+                Status="@Match.Status"
+                ButtonText="Voir les pronos" />
+        }
+        <PronosticButton Match="@Match"
+                         HasPronostic="@HasPronostic"
+                         OnPronosticSaved="@HandlePronosticSaved"
+                         OnModalOpened="@NotifyModalOpened"
+                         OnModalClosed="@NotifyModalClosed"
+                         Size="Small" />
+    </div>
+
+</MudPaper>
 
 @code {
-    [Parameter]
-    public MatchDto Match { get; set; } = null!;
-
-    [Parameter]
-    public bool HasPronostic { get; set; }
-
-    [Parameter]
-    public PronosticDto? UserPronostic { get; set; }
-
-    [Parameter]
-    public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
-
-    [Parameter]
-    public EventCallback OnPronosticModalOpened { get; set; }
-
-    [Parameter]
-    public EventCallback OnPronosticModalClosed { get; set; }
+    [Parameter] public MatchDto Match { get; set; } = null!;
+    [Parameter] public bool HasPronostic { get; set; }
+    [Parameter] public PronosticDto? UserPronostic { get; set; }
+    [Parameter] public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
+    [Parameter] public EventCallback OnPronosticModalOpened { get; set; }
+    [Parameter] public EventCallback OnPronosticModalClosed { get; set; }
 
     private async Task HandlePronosticSaved(PronosticDto prono)
     {
         if (OnPronosticSaved.HasDelegate)
-        {
             await OnPronosticSaved.InvokeAsync(prono);
-        }
     }
 
     private async Task NotifyModalOpened()
     {
         if (OnPronosticModalOpened.HasDelegate)
-        {
             await OnPronosticModalOpened.InvokeAsync();
-        }
     }
 
     private async Task NotifyModalClosed()
     {
         if (OnPronosticModalClosed.HasDelegate)
-        {
             await OnPronosticModalClosed.InvokeAsync();
-        }
     }
 
-    private string GetStatusBadgeClass()
+    private Color GetStatusColor() => Match.Status switch
     {
-        if (Match.ScoreTeam1.HasValue && Match.ScoreTeam2.HasValue)
-            return "bg-secondary";
+        MatchStatus.Live      => Color.Success,
+        MatchStatus.Finished  => Color.Primary,
+        MatchStatus.Postponed => Color.Warning,
+        _ => CanPronostic() ? Color.Success : Color.Default
+    };
 
-        if (!CanPronostic())
-            return "bg-warning";
-
-        return "bg-success";
-    }
-
-    private string GetStatusText()
+    private string GetStatusText() => Match.Status switch
     {
-        if (Match.ScoreTeam1.HasValue && Match.ScoreTeam2.HasValue)
-            return "Terminé";
+        MatchStatus.Live      => "En cours",
+        MatchStatus.Finished  => "Terminé",
+        MatchStatus.Postponed => "Reporté",
+        _ => CanPronostic() ? "Ouvert" : "Verrouillé"
+    };
 
-        if (!CanPronostic())
-            return "Verrouillé";
-
-        return "Pending";
-    }
-
-    private bool CanPronostic()
+    private Color GetPointsColor(int pts) => pts switch
     {
-        return Match.Status == MatchStatus.Scheduled 
-            && DateTime.UtcNow < Match.LockPronosticsAt;
-    }
+        3 => Color.Success,
+        1 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private bool CanPronostic() =>
+        Match.Status == MatchStatus.Scheduled && DateTime.UtcNow < Match.LockPronosticsAt;
 }
 
 <style>
+    .match-teams-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .team-block {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .score-separator {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex-shrink: 0;
+        min-width: 40px;
+    }
+
     .team-flag {
-        width: 48px;
-        height: 32px;
-        object-fit: contain;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
+        width: 40px;
+        height: 27px;
+        object-fit: cover;
+        border-radius: 3px;
+        border: 1px solid var(--mud-palette-divider);
     }
 </style>

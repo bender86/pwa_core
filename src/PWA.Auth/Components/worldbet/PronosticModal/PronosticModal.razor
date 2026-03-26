@@ -18,10 +18,33 @@
                     }
                 </div>
                 
+                
                 <div class="match-teams">
-                    <MudText Typo="Typo.h6" Class="white-text">@Match.Team1Name</MudText>
+                    <div class="team-block">
+                        @if (!string.IsNullOrEmpty(Match.FlagUrlTeam1))
+                        {
+                            <MudImage Src="@Match.FlagUrlTeam1"
+                                    Alt="@Match.Team1Name"
+                                    Width="40" Height="27"
+                                    ObjectFit="ObjectFit.Cover"
+                                    Style="border-radius: 3px; border: 1px solid rgba(255,255,255,0.3);" />
+                        }
+                        <MudText Typo="Typo.h6" Class="white-text">@Match.Team1Name</MudText>
+                    </div>
+
                     <MudText Typo="Typo.h5" Class="white-text mx-3">VS</MudText>
-                    <MudText Typo="Typo.h6" Class="white-text">@Match.Team2Name</MudText>
+
+                    <div class="team-block">
+                        @if (!string.IsNullOrEmpty(Match.FlagUrlTeam2))
+                        {
+                            <MudImage Src="@Match.FlagUrlTeam2"
+                                    Alt="@Match.Team2Name"
+                                    Width="40" Height="27"
+                                    ObjectFit="ObjectFit.Cover"
+                                    Style="border-radius: 3px; border: 1px solid rgba(255,255,255,0.3);" />
+                        }
+                        <MudText Typo="Typo.h6" Class="white-text">@Match.Team2Name</MudText>
+                    </div>
                 </div>
                 
                 <div class="text-center mt-3">
@@ -94,6 +117,7 @@
 @code {
     [Parameter] public MatchDto Match { get; set; } = null!;
     [Parameter] public EventCallback<PronosticDto> OnSaved { get; set; }
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
 
     private int? team1Score;
     private int? team2Score;
@@ -170,7 +194,7 @@
 
     private void Close()
     {
-        // Le dialog se ferme automatiquement
+        MudDialog.Cancel();
     }
 }
 
@@ -224,5 +248,11 @@
         .score-separator {
             display: none;
         }
+    }
+    .team-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
     }
 </style>

@@ -18,18 +18,46 @@
             {
                 <!-- Match Info -->
                 <MudPaper Elevation="0" Class="match-info mb-4 pa-4">
-                    <MudText Typo="Typo.h5" Class="mb-2 white-text">
-                        <strong>@matchPronostics.Match.Team1Name</strong>
-                        @if (matchPronostics.Match.ScoreTeam1.HasValue && matchPronostics.Match.ScoreTeam2.HasValue)
-                        {
-                            <span class="mx-3">@matchPronostics.Match.ScoreTeam1 - @matchPronostics.Match.ScoreTeam2</span>
-                        }
-                        else
-                        {
-                            <span class="mx-3">vs</span>
-                        }
-                        <strong>@matchPronostics.Match.Team2Name</strong>
-                    </MudText>
+                    <div class="d-flex align-items-center justify-content-center gap-3 mb-2 flex-wrap">
+                        <div class="d-flex align-items-center gap-2">
+                            @if (!string.IsNullOrEmpty(matchPronostics.Match.FlagUrlTeam1))
+                            {
+                                <MudImage Src="@matchPronostics.Match.FlagUrlTeam1" 
+                                        Alt="@matchPronostics.Match.Team1Name"
+                                        Width="32" Height="22"
+                                        ObjectFit="ObjectFit.Cover"
+                                        Style="border-radius: 3px; border: 1px solid rgba(255,255,255,0.3);" />
+                            }
+                            <MudText Typo="Typo.h6" Style="color: white; font-weight: 700;">
+                                @matchPronostics.Match.Team1Name 
+                            </MudText>
+                        </div>
+
+                        <MudText Typo="Typo.h5" Style="color: white;">
+                            @if (matchPronostics.Match.ScoreTeam1.HasValue && matchPronostics.Match.ScoreTeam2.HasValue)
+                            {
+                                @($"{matchPronostics.Match.ScoreTeam1} - {matchPronostics.Match.ScoreTeam2}")
+                            }
+                            else
+                            {
+                                <span>vs</span>
+                            }
+                        </MudText>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <MudText Typo="Typo.h6" Style="color: white; font-weight: 700;">
+                                @matchPronostics.Match.Team2Name
+                            </MudText>
+                            @if (!string.IsNullOrEmpty(matchPronostics.Match.FlagUrlTeam2))
+                            {
+                                <MudImage Src="@matchPronostics.Match.FlagUrlTeam2"
+                                        Alt="@matchPronostics.Match.Team2Name"
+                                        Width="32" Height="22"
+                                        ObjectFit="ObjectFit.Cover"
+                                        Style="border-radius: 3px; border: 1px solid rgba(255,255,255,0.3);" />
+                            }
+                        </div>
+                    </div>
                     <MudText Typo="Typo.body2" Class="white-text">
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
                         @matchPronostics.Match.ScheduledDate.ToString("dd/MM/yyyy HH:mm")
