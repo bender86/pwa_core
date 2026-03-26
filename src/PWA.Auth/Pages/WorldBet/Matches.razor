@@ -3,6 +3,7 @@
 @using dto.worldbet.Models
 @using dto.worldbet.Requests
 @using dto.worldbet.Enums
+@using PWA.Auth.Components.worldbet.PronosticModal
 @layout WorldBetLayout
 @inject ITournamentService TournamentService
 @inject IAdminService AdminService
@@ -330,6 +331,7 @@
     {
         await CheckUserRole();
         await LoadAllData();
+        await HandleOpenPronoParam();
     }
 
     private async Task CheckUserRole()
@@ -583,6 +585,62 @@
             isDeleting = false;
         }
     }
+    #region ouverture modal prono
+    private async Task HandleOpenPronoParam()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = uri.Query.TrimStart('?');
+        
+        var matchIdStr = query
+            .Split('&')
+            .Select(p => p.Split('='))
+            .FirstOrDefault(p => p.Length == 2 && p[0] == "openProno")?[1];
+
+        if (string.IsNullOrEmpty(matchIdStr) || !int.TryParse(matchIdStr, out var matchId))
+            return;
+
+        var match = allMatches.FirstOrDefault(m => m.MatchId == matchId);
+        if (match == null) return;
+
+        if (match.Status != MatchStatus.Scheduled || DateTime.UtcNow >= match.LockPronosticsAt)
+        {
+            Snackbar.Add("Les pronostics pour ce match sont fermés.", Severity.Warning);
+            return;
+        }
+
+        await OpenPronosticModal(match);
+    }
+
+    // Ouvre le PronosticModal directement (même logique que PronosticButton)
+    private async Task OpenPronosticModal(MatchDto match)
+    {
+        var parameters = new DialogParameters<PronosticModal>
+        {
+            { x => x.Match, match },
+            { x => x.OnSaved, EventCallback.Factory.Create<PronosticDto>(this, HandlePronosticSavedInGrid) }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        var dialog = await DialogService.ShowAsync<PronosticModal>(
+            "Votre Pronostic",
+            parameters,
+            options
+        );
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is PronosticDto prono)
+            await HandlePronosticSavedInGrid(prono);
+    }
     
     private void CloseModal()
     {
@@ -591,7 +649,7 @@
         currentMatchId = 0;
         modalError = null;
     }
-    
+    #endregion
     private Color GetStatusMudColor(MatchStatus status) => status switch
     {
         MatchStatus.Scheduled => Color.Default,
