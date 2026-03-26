@@ -180,6 +180,7 @@
 
             var saved = await PronosticService.CreateOrUpdatePronosticAsync(request);
             await OnSaved.InvokeAsync(saved);
+            MudDialog.Close(DialogResult.Ok(saved)); // ferme et passe le résultat au parent
         }
         catch (Exception ex)
         {
