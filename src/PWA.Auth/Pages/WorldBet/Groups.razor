@@ -2,9 +2,13 @@
 @using PWA.Auth.Pages.WorldBet.Shared
 @using dto.worldbet.Models
 @using dto.worldbet.Enums
+@using dto.worldbet.Requests
 @layout WorldBetLayout
 @inject ITournamentService TournamentService
 @inject IPronosticService PronosticService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @attribute [Authorize]
 
 <PageTitle>Groupes</PageTitle>
@@ -32,19 +36,17 @@
     }
     else
     {
-        <!-- Group selector -->
-
         <MudPaper Class="pa-4 mb-4" Elevation="2">
             <MudSelect T="string"
-                    Value="@selectedGroup"
-                    ValueChanged="@SelectGroup"
-                    Label="Groupe"
-                    Variant="Variant.Outlined"
-                    Margin="Margin.Dense"
-                    Clearable="false"
-                    AdornmentIcon="@Icons.Material.Filled.Groups"
-                    AdornmentColor="Color.Primary"
-                    Style="max-width: 300px;">
+                       Value="@selectedGroup"
+                       ValueChanged="@SelectGroup"
+                       Label="Groupe"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="false"
+                       AdornmentIcon="@Icons.Material.Filled.Groups"
+                       AdornmentColor="Color.Primary"
+                       Style="max-width: 300px;">
                 @foreach (var group in groups)
                 {
                     <MudSelectItem Value="@group">Groupe @group</MudSelectItem>
@@ -96,8 +98,7 @@
                                         var pos = currentStandings.IndexOf(standing) + 1;
                                         <tr style="@GetRowStyle(pos)">
                                             <td>
-                                                <MudChip T="string"
-                                                         Size="Size.Small"
+                                                <MudChip T="string" Size="Size.Small"
                                                          Color="@GetPositionColor(pos)"
                                                          Style="min-width: 28px; justify-content: center;">
                                                     @pos
@@ -126,7 +127,7 @@
                                                 <MudText Typo="Typo.body2" Style="font-weight: 700;">@standing.Points</MudText>
                                             </td>
                                         </tr>
-                                                                            }
+                                    }
                                 </tbody>
                             </MudSimpleTable>
                             <div class="pa-3" style="background: var(--mud-palette-background-grey); border-top: 1px solid var(--mud-palette-divider);">
@@ -171,7 +172,11 @@
                                         <MatchCard Match="@match"
                                                    HasPronostic="@hasProno"
                                                    UserPronostic="@prono"
-                                                   OnPronosticSaved="@HandlePronosticSaved" />
+                                                   OnPronosticSaved="@HandlePronosticSaved"
+                                                   IsAdmin="@isAdmin"
+                                                   OnEdit="@EditMatch"
+                                                   OnDelete="@ConfirmDelete"
+                                                   OnCalculated="@LoadMatches" />
                                     }
                                 </div>
                             }
@@ -183,21 +188,59 @@
     }
 </MudContainer>
 
+<!-- Match Form Modal (Admin only) -->
+<MatchFormModal @bind-IsVisible="showModal"
+                Model="@currentRequest"
+                Teams="@allTeams"
+                Phases="@allPhases"
+                IsLoading="@isSaving"
+                ErrorMessage="@modalError"
+                IsEditMode="true"
+                OnSubmit="SaveMatch"
+                OnCancel="CloseModal" />
+
 @code {
     private List<string> groups = new();
     private string selectedGroup = "";
     private List<GroupStandingDto> currentStandings = new();
     private List<MatchDto> currentMatches = new();
     private Dictionary<int, PronosticDto> userPronostics = new();
+    private List<TeamDto> allTeams = new();
+    private List<PhaseDto> allPhases = new();
 
     private bool isLoading = true;
     private bool isLoadingStandings = false;
     private bool isLoadingMatches = false;
+    private bool isAdmin = false;
+    private bool showModal = false;
+    private bool isSaving = false;
     private string? errorMessage;
+    private string? modalError;
+
+    private CreateMatchRequest currentRequest = new();
+    private int currentMatchId = 0;
 
     protected override async Task OnInitializedAsync()
     {
+        await CheckUserRole();
         await LoadGroups();
+        if (isAdmin)
+            await LoadTeamsAndPhases();
+    }
+
+    private async Task CheckUserRole()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAdmin = authState.User.IsInRole("Admin");
+    }
+
+    private async Task LoadTeamsAndPhases()
+    {
+        var teamsTask = TournamentService.GetAllTeamsAsync();
+        var phasesTask = TournamentService.GetAllPhasesAsync();
+        await Task.WhenAll(teamsTask, phasesTask);
+        allTeams = await teamsTask;
+        allPhases = await phasesTask;
     }
 
     private async Task LoadGroups()
@@ -236,35 +279,17 @@
     private async Task LoadStandings()
     {
         isLoadingStandings = true;
-        try
-        {
-            currentStandings = await TournamentService.GetGroupStandingsAsync(selectedGroup);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Erreur classement : {ex.Message}";
-        }
-        finally
-        {
-            isLoadingStandings = false;
-        }
+        try { currentStandings = await TournamentService.GetGroupStandingsAsync(selectedGroup); }
+        catch (Exception ex) { errorMessage = $"Erreur classement : {ex.Message}"; }
+        finally { isLoadingStandings = false; }
     }
 
     private async Task LoadMatches()
     {
         isLoadingMatches = true;
-        try
-        {
-            currentMatches = await TournamentService.GetGroupMatchesAsync(selectedGroup);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Erreur matches : {ex.Message}";
-        }
-        finally
-        {
-            isLoadingMatches = false;
-        }
+        try { currentMatches = await TournamentService.GetGroupMatchesAsync(selectedGroup); }
+        catch (Exception ex) { errorMessage = $"Erreur matches : {ex.Message}"; }
+        finally { isLoadingMatches = false; }
     }
 
     private async Task LoadPronostics()
@@ -274,16 +299,105 @@
             var pronostics = await PronosticService.GetMyPronosticsAsync();
             userPronostics = pronostics.ToDictionary(p => p.MatchId, p => p);
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Erreur pronostics : {ex.Message}";
-        }
+        catch (Exception ex) { errorMessage = $"Erreur pronostics : {ex.Message}"; }
     }
 
     private async Task HandlePronosticSaved(PronosticDto prono)
     {
         userPronostics[prono.MatchId] = prono;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void EditMatch(MatchDto match)
+    {
+        currentMatchId = match.MatchId;
+        currentRequest = new CreateMatchRequest
+        {
+            PhaseId          = match.PhaseId,
+            Team1Id          = match.Team1Id,
+            Team2Id          = match.Team2Id,
+            ScheduledDate    = match.ScheduledDate,
+            Venue            = match.Venue,
+            MatchNumber      = match.MatchNumber,
+            GroupLetter      = match.GroupLetter,
+            ScoreTeam1       = match.ScoreTeam1,
+            ScoreTeam2       = match.ScoreTeam2,
+            Status           = match.Status,
+            LockPronosticsAt = match.LockPronosticsAt,
+            FinishedType     = match.FinishedType,
+            PenaltyWinnerTeam = match.PenaltyWinnerTeam
+        };
+        modalError = null;
+        showModal = true;
+    }
+
+    private async Task SaveMatch()
+    {
+        isSaving = true;
+        modalError = null;
+        try
+        {
+            var updateRequest = new UpdateMatchRequest
+            {
+                PhaseId           = currentRequest.PhaseId,
+                Team1Id           = currentRequest.Team1Id,
+                Team2Id           = currentRequest.Team2Id,
+                ScheduledDate     = currentRequest.ScheduledDate,
+                Venue             = currentRequest.Venue,
+                MatchNumber       = currentRequest.MatchNumber,
+                GroupLetter       = currentRequest.GroupLetter,
+                ScoreTeam1        = currentRequest.ScoreTeam1,
+                ScoreTeam2        = currentRequest.ScoreTeam2,
+                Status            = currentRequest.Status,
+                LockPronosticsAt  = currentRequest.LockPronosticsAt,
+                FinishedType      = currentRequest.FinishedType,
+                PenaltyWinnerTeam = currentRequest.PenaltyWinnerTeam
+            };
+
+            await TournamentService.UpdateMatchAsync(currentMatchId, updateRequest);
+            Snackbar.Add("Match modifié avec succès !", Severity.Success);
+            await LoadMatches();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ConfirmDelete(MatchDto match)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirmer la suppression",
+            $"Supprimer {match.Team1Name} vs {match.Team2Name} ?\n\n⚠️ Cette action est irréversible.",
+            yesText: "Supprimer",
+            cancelText: "Annuler");
+
+        if (result == true)
+        {
+            try
+            {
+                await TournamentService.DeleteMatchAsync(match.MatchId);
+                Snackbar.Add("Match supprimé.", Severity.Success);
+                await LoadMatches();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur : {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentRequest = new();
+        currentMatchId = 0;
+        modalError = null;
     }
 
     private Color GetPositionColor(int pos) => pos <= 2 ? Color.Success : Color.Default;

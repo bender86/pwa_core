@@ -2,16 +2,18 @@
 @using PWA.Auth.Pages.WorldBet.Shared
 @using dto.worldbet.Models
 @using dto.worldbet.Enums
+@using dto.worldbet.Requests
 @layout WorldBetLayout
 @inject IPronosticService PronosticService
 @inject ITournamentService TournamentService
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <PageTitle>Mes Pronostics</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <!-- Page Header -->
     <MudText Typo="Typo.h4" Class="mb-4">
         <MudIcon Icon="@Icons.Material.Filled.Bolt" Class="me-2" />
         Mes Pronostics
@@ -24,7 +26,6 @@
     else
     {
         <!-- Statistics Cards -->
-        
         <MudGrid Class="mb-4">
             <MudItem xs="6" sm="3">
                 <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
@@ -39,7 +40,6 @@
                     </div>
                 </MudPaper>
             </MudItem>
-
             <MudItem xs="6" sm="3">
                 <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
                     <div class="stat-card">
@@ -53,7 +53,6 @@
                     </div>
                 </MudPaper>
             </MudItem>
-
             <MudItem xs="6" sm="3">
                 <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
                     <div class="stat-card">
@@ -67,7 +66,6 @@
                     </div>
                 </MudPaper>
             </MudItem>
-
             <MudItem xs="6" sm="3">
                 <MudPaper Elevation="2" Class="pa-3 pa-sm-4">
                     <div class="stat-card">
@@ -87,9 +85,9 @@
         <MudPaper Class="pa-4 mb-4" Elevation="2">
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="4">
-                    <MudSelect T="string" 
+                    <MudSelect T="string"
                                @bind-Value="filterStatus"
-                               Label="Statut" 
+                               Label="Statut"
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
                                Clearable="true"
@@ -100,11 +98,10 @@
                         <MudSelectItem Value="@("incorrect")">Perdus</MudSelectItem>
                     </MudSelect>
                 </MudItem>
-
                 <MudItem xs="12" sm="4">
-                    <MudSelect T="string" 
+                    <MudSelect T="string"
                                @bind-Value="filterPhase"
-                               Label="Phase" 
+                               Label="Phase"
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
                                Clearable="true"
@@ -116,11 +113,10 @@
                         }
                     </MudSelect>
                 </MudItem>
-
                 <MudItem xs="12" sm="4" Class="d-flex align-items-center">
-                    <MudSwitch @bind-Value="showOnlyWithPoints" 
-                              Color="Color.Primary"
-                              Label="Seulement avec points" />
+                    <MudSwitch @bind-Value="showOnlyWithPoints"
+                               Color="Color.Primary"
+                               Label="Seulement avec points" />
                 </MudItem>
             </MudGrid>
         </MudPaper>
@@ -135,7 +131,7 @@
                 }
                 else
                 {
-                    <span>Vous n'avez pas encore fait de pronostics. Rendez-vous sur la page 
+                    <span>Vous n'avez pas encore fait de pronostics. Rendez-vous sur la page
                         <MudLink Href="/worldbet/matches">Matches</MudLink> pour commencer !
                     </span>
                 }
@@ -146,14 +142,16 @@
             <MudGrid Spacing="3">
                 @foreach (var prono in filteredPronostics)
                 {
-                    var match = matchesDict.GetValueOrDefault(prono.MatchId);
-                    if (match == null) continue;
-
+                    if (prono.Match == null) continue;
                     <MudItem xs="12" sm="6" md="4">
-                        <MatchCard Match="@match" 
-                                   HasPronostic="true" 
+                        <MatchCard Match="@prono.Match"
+                                   HasPronostic="true"
                                    UserPronostic="@prono"
-                                   OnPronosticSaved="@HandlePronosticUpdated" />
+                                   OnPronosticSaved="@HandlePronosticUpdated"
+                                   IsAdmin="@isAdmin"
+                                   OnEdit="@EditMatch"
+                                   OnDelete="@ConfirmDelete"
+                                   OnCalculated="@LoadData" />
                     </MudItem>
                 }
             </MudGrid>
@@ -161,15 +159,34 @@
     }
 </MudContainer>
 
+<!-- Match Form Modal (Admin only) -->
+<MatchFormModal @bind-IsVisible="showModal"
+                Model="@currentRequest"
+                Teams="@allTeams"
+                Phases="@allPhases"
+                IsLoading="@isSaving"
+                ErrorMessage="@modalError"
+                IsEditMode="true"
+                OnSubmit="SaveMatch"
+                OnCancel="CloseModal" />
+
 @code {
     private List<PronosticDto> pronostics = new();
     private List<PronosticDto> filteredPronostics = new();
-    private Dictionary<int, MatchDto> matchesDict = new();
     private List<string> uniquePhases = new();
-
     private bool isLoading = true;
+    private bool isAdmin = false;
 
-    // Filters — using properties with setters to trigger FilterPronostics() on change
+    // Admin
+    private List<TeamDto> allTeams = new();
+    private List<PhaseDto> allPhases = new();
+    private bool showModal = false;
+    private bool isSaving = false;
+    private string? modalError;
+    private CreateMatchRequest currentRequest = new();
+    private int currentMatchId = 0;
+
+    // Filters
     private string _filterStatus = "";
     private string filterStatus
     {
@@ -198,42 +215,36 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-    }
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAdmin = authState.User.IsInRole("Admin");
 
-    protected override async Task OnParametersSetAsync()
-    {
-        // Refilter when filter parameters change
-        FilterPronostics();
+        if (isAdmin)
+        {
+            var teamsTask = TournamentService.GetAllTeamsAsync();
+            var phasesTask = TournamentService.GetAllPhasesAsync();
+            await Task.WhenAll(teamsTask, phasesTask);
+            allTeams = await teamsTask;
+            allPhases = await phasesTask;
+        }
+
+        await LoadData();
     }
 
     private async Task LoadData()
     {
         isLoading = true;
-
         try
         {
-            var pronosticsTask = PronosticService.GetMyPronosticsAsync();
-            var matchesTask = TournamentService.GetAllMatchesAsync();
+            pronostics = await PronosticService.GetMyPronosticsAsync();
 
-            await Task.WhenAll(pronosticsTask, matchesTask);
-
-            pronostics = await pronosticsTask;
-            var matches = await matchesTask;
-
-            matchesDict = matches.ToDictionary(m => m.MatchId);
-
-            // Extract unique phases from matches that have pronostics
             uniquePhases = pronostics
-                .Select(p => matchesDict.GetValueOrDefault(p.MatchId)?.PhaseName)
+                .Select(p => p.Match?.PhaseName)
                 .Where(p => p != null)
                 .Distinct()
                 .OrderBy(p => p)
                 .ToList()!;
 
-            // Calculate stats
             CalculateStats();
-
             FilterPronostics();
         }
         catch (Exception ex)
@@ -248,54 +259,30 @@
 
     private void CalculateStats()
     {
-        totalPoints = pronostics.Sum(p => p.PointsEarned);
-        
-        exactScores = pronostics.Count(p => 
-        {
-            var match = matchesDict.GetValueOrDefault(p.MatchId);
-            return match != null && IsExactScore(p, match);
-        });
-        
-        pendingCount = pronostics.Count(p => 
-        {
-            var match = matchesDict.GetValueOrDefault(p.MatchId);
-            return match != null && match.Status != MatchStatus.Finished;
-        });
+        totalPoints  = pronostics.Sum(p => p.PointsEarned);
+        exactScores  = pronostics.Count(p => p.IsCorrectScore);
+        pendingCount = pronostics.Count(p => p.Match?.Status != MatchStatus.Finished);
     }
 
     private void FilterPronostics()
     {
         filteredPronostics = pronostics.Where(p =>
         {
-            var match = matchesDict.GetValueOrDefault(p.MatchId);
-            if (match == null) return false;
+            if (p.Match == null) return false;
 
-            // Filter by status
             if (!string.IsNullOrEmpty(filterStatus))
             {
-                if (filterStatus == "pending" && match.Status == MatchStatus.Finished)
-                    return false;
-                if (filterStatus == "correct" && (match.Status != MatchStatus.Finished || p.PointsEarned == 0))
-                    return false;
-                if (filterStatus == "incorrect" && (match.Status != MatchStatus.Finished || p.PointsEarned > 0))
-                    return false;
+                if (filterStatus == "pending"   && p.Match.Status == MatchStatus.Finished)  return false;
+                if (filterStatus == "correct"   && (p.Match.Status != MatchStatus.Finished || p.PointsEarned == 0)) return false;
+                if (filterStatus == "incorrect" && (p.Match.Status != MatchStatus.Finished || p.PointsEarned > 0))  return false;
             }
 
-            // Filter by phase
-            if (!string.IsNullOrEmpty(filterPhase) && match.PhaseName != filterPhase)
-                return false;
-
-            // Filter by points
-            if (showOnlyWithPoints && p.PointsEarned == 0)
-                return false;
+            if (!string.IsNullOrEmpty(filterPhase) && p.Match.PhaseName != filterPhase) return false;
+            if (showOnlyWithPoints && p.PointsEarned == 0) return false;
 
             return true;
         })
-        .OrderByDescending(p => 
-        {
-            var match = matchesDict.GetValueOrDefault(p.MatchId);
-            return match?.ScheduledDate ?? DateTime.MinValue;
-        })
+        .OrderByDescending(p => p.Match?.ScheduledDate ?? DateTime.MinValue)
         .ToList();
 
         StateHasChanged();
@@ -303,32 +290,107 @@
 
     private async Task HandlePronosticUpdated(PronosticDto updatedProno)
     {
-        // Update the pronostic in the list
         var index = pronostics.FindIndex(p => p.PronosticId == updatedProno.PronosticId);
         if (index >= 0)
-        {
             pronostics[index] = updatedProno;
-        }
         else
-        {
             pronostics.Add(updatedProno);
-        }
 
-        // Recalculate stats
         CalculateStats();
-        
-        // Refilter
         FilterPronostics();
 
         Snackbar.Add($"Pronostic mis à jour : {updatedProno.PredictedScoreTeam1}-{updatedProno.PredictedScoreTeam2}", Severity.Success);
     }
 
-    private bool IsExactScore(PronosticDto prono, MatchDto match)
+    private void EditMatch(MatchDto match)
     {
-        return match.ScoreTeam1.HasValue 
-            && match.ScoreTeam2.HasValue
-            && prono.PredictedScoreTeam1 == match.ScoreTeam1 
-            && prono.PredictedScoreTeam2 == match.ScoreTeam2;
+        currentMatchId = match.MatchId;
+        currentRequest = new CreateMatchRequest
+        {
+            PhaseId           = match.PhaseId,
+            Team1Id           = match.Team1Id,
+            Team2Id           = match.Team2Id,
+            ScheduledDate     = match.ScheduledDate,
+            Venue             = match.Venue,
+            MatchNumber       = match.MatchNumber,
+            GroupLetter       = match.GroupLetter,
+            ScoreTeam1        = match.ScoreTeam1,
+            ScoreTeam2        = match.ScoreTeam2,
+            Status            = match.Status,
+            LockPronosticsAt  = match.LockPronosticsAt,
+            FinishedType      = match.FinishedType,
+            PenaltyWinnerTeam = match.PenaltyWinnerTeam
+        };
+        modalError = null;
+        showModal = true;
+    }
+
+    private async Task SaveMatch()
+    {
+        isSaving = true;
+        modalError = null;
+        try
+        {
+            var updateRequest = new UpdateMatchRequest
+            {
+                PhaseId           = currentRequest.PhaseId,
+                Team1Id           = currentRequest.Team1Id,
+                Team2Id           = currentRequest.Team2Id,
+                ScheduledDate     = currentRequest.ScheduledDate,
+                Venue             = currentRequest.Venue,
+                MatchNumber       = currentRequest.MatchNumber,
+                GroupLetter       = currentRequest.GroupLetter,
+                ScoreTeam1        = currentRequest.ScoreTeam1,
+                ScoreTeam2        = currentRequest.ScoreTeam2,
+                Status            = currentRequest.Status,
+                LockPronosticsAt  = currentRequest.LockPronosticsAt,
+                FinishedType      = currentRequest.FinishedType,
+                PenaltyWinnerTeam = currentRequest.PenaltyWinnerTeam
+            };
+            await TournamentService.UpdateMatchAsync(currentMatchId, updateRequest);
+            Snackbar.Add("Match modifié avec succès !", Severity.Success);
+            await LoadData();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ConfirmDelete(MatchDto match)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirmer la suppression",
+            $"Supprimer {match.Team1Name} vs {match.Team2Name} ?\n\n⚠️ Cette action est irréversible.",
+            yesText: "Supprimer",
+            cancelText: "Annuler");
+
+        if (result == true)
+        {
+            try
+            {
+                await TournamentService.DeleteMatchAsync(match.MatchId);
+                Snackbar.Add("Match supprimé.", Severity.Success);
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erreur : {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentRequest = new();
+        currentMatchId = 0;
+        modalError = null;
     }
 }
 

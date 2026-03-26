@@ -31,8 +31,7 @@
         <div class="team-block">
             @if (!string.IsNullOrEmpty(Match.FlagUrlTeam1))
             {
-                <img src="@Match.FlagUrlTeam1" alt="@Match.Team1Name"
-                     class="team-flag" />
+                <img src="@Match.FlagUrlTeam1" alt="@Match.Team1Name" class="team-flag" />
             }
             <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
                 @Match.Team1Name
@@ -69,8 +68,7 @@
         <div class="team-block">
             @if (!string.IsNullOrEmpty(Match.FlagUrlTeam2))
             {
-                <img src="@Match.FlagUrlTeam2" alt="@Match.Team2Name"
-                     class="team-flag" />
+                <img src="@Match.FlagUrlTeam2" alt="@Match.Team2Name" class="team-flag" />
             }
             <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
                 @Match.Team2Name
@@ -125,20 +123,51 @@
 
     @* Actions *@
     <MudDivider />
-    <div class="d-flex justify-content-center gap-2 px-3 py-2">
-        @if (Match.Status == MatchStatus.Live || Match.Status == MatchStatus.Finished)
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 flex-wrap gap-2">
+
+        @* Actions utilisateur *@
+        <div class="d-flex gap-2 align-items-center">
+            @if (Match.Status == MatchStatus.Live || Match.Status == MatchStatus.Finished)
+            {
+                <ViewPronosticsButton
+                    MatchId="@Match.MatchId"
+                    Status="@Match.Status"
+                    ButtonText="Voir les pronos" />
+            }
+            <PronosticButton Match="@Match"
+                             HasPronostic="@HasPronostic"
+                             OnPronosticSaved="@HandlePronosticSaved"
+                             OnModalOpened="@NotifyModalOpened"
+                             OnModalClosed="@NotifyModalClosed"
+                             Size="Small" />
+        </div>
+
+        @* Actions admin *@
+        @if (IsAdmin)
         {
-            <ViewPronosticsButton
-                MatchId="@Match.MatchId"
-                Status="@Match.Status"
-                ButtonText="Voir les pronos" />
+            <div class="d-flex gap-1 align-items-center">
+                @if (Match.ScoreTeam1.HasValue && Match.ScoreTeam2.HasValue)
+                {
+                    <CalculateButton
+                        MatchId="@Match.MatchId"
+                        ScoreTeam1="@Match.ScoreTeam1"
+                        ScoreTeam2="@Match.ScoreTeam2"
+                        OnCalculated="@HandleCalculated" />
+                }
+                <MudTooltip Text="Modifier">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="@(() => OnEdit.InvokeAsync(Match))" />
+                </MudTooltip>
+                <MudTooltip Text="Supprimer">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(() => OnDelete.InvokeAsync(Match))" />
+                </MudTooltip>
+            </div>
         }
-        <PronosticButton Match="@Match"
-                         HasPronostic="@HasPronostic"
-                         OnPronosticSaved="@HandlePronosticSaved"
-                         OnModalOpened="@NotifyModalOpened"
-                         OnModalClosed="@NotifyModalClosed"
-                         Size="Small" />
     </div>
 
 </MudPaper>
@@ -150,6 +179,12 @@
     [Parameter] public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
     [Parameter] public EventCallback OnPronosticModalOpened { get; set; }
     [Parameter] public EventCallback OnPronosticModalClosed { get; set; }
+
+    // Admin params — optional, default false/empty
+    [Parameter] public bool IsAdmin { get; set; } = false;
+    [Parameter] public EventCallback<MatchDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<MatchDto> OnDelete { get; set; }
+    [Parameter] public EventCallback OnCalculated { get; set; }
 
     private async Task HandlePronosticSaved(PronosticDto prono)
     {
@@ -167,6 +202,12 @@
     {
         if (OnPronosticModalClosed.HasDelegate)
             await OnPronosticModalClosed.InvokeAsync();
+    }
+
+    private async Task HandleCalculated()
+    {
+        if (OnCalculated.HasDelegate)
+            await OnCalculated.InvokeAsync();
     }
 
     private Color GetStatusColor() => Match.Status switch

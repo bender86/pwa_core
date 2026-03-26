@@ -88,7 +88,8 @@
                 </MudItem>
 
                 <MudItem xs="12" sm="6" md="3">
-                    <MudTextField @bind-Value="searchString" 
+                    <MudTextField T="string" Value="@searchString"
+                                ValueChanged="@OnSearchChanged"
                                   Placeholder="Rechercher..." 
                                   Adornment="Adornment.Start" 
                                   AdornmentIcon="@Icons.Material.Filled.Search"
@@ -100,182 +101,33 @@
             </MudGrid>
         </MudPaper>
 
-        <MudDataGrid T="MatchDto" 
-                     Items="@filteredMatches" 
-                     Dense="true" 
-                     Hover="true"
-                     Bordered="true" 
-                     Striped="true" 
-                     Filterable="false"
-                     SortMode="SortMode.Multiple"
-                     QuickFilter="@QuickFilter"
-                     Class="mb-4">
-            
-            <Columns>
-                <!-- Date -->
-                <PropertyColumn Property="x => x.ScheduledDate" Title="Date" Sortable="true">
-                    <CellTemplate>
-                        <MudText Typo="Typo.body2">
-                            @context.Item.ScheduledDate.ToString("dd/MM/yyyy")
-                            <br />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @context.Item.ScheduledDate.ToString("HH:mm")
-                            </MudText>
-                        </MudText>
-                    </CellTemplate>
-                </PropertyColumn>
-
-                <!-- Phase -->
-                <PropertyColumn Property="x => x.PhaseName" Title="Phase" Sortable="true">
-                    <CellTemplate>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                            @context.Item.PhaseName
-                        </MudChip>
-                    </CellTemplate>
-                </PropertyColumn>
-
-                <!-- Group -->
-                <TemplateColumn Title="Groupe" Sortable="false">
-                    <CellTemplate>
-                        @if (!string.IsNullOrEmpty(context.Item.GroupLetter))
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary">
-                                @context.Item.GroupLetter
-                            </MudChip>
-                        }
-                        else
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Tertiary">-</MudText>
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-
-                <!-- Match -->
-                <TemplateColumn Title="Match" Sortable="false">
-                    <CellTemplate>
-                        <div class="d-flex flex-column">
-                            <MudText Typo="Typo.body1" Class="font-weight-bold">
-                                @context.Item.Team1Name
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">vs</MudText>
-                            <MudText Typo="Typo.body1" Class="font-weight-bold">
-                                @context.Item.Team2Name
-                            </MudText>
-                        </div>
-                    </CellTemplate>
-                </TemplateColumn>
-
-                <!-- Score -->
-                
-                <TemplateColumn Title="Score" Sortable="false">
-                    <CellTemplate>
-                        <div class="d-flex align-items-center gap-2">
-                            @if (context.Item.ScoreTeam1.HasValue && context.Item.ScoreTeam2.HasValue)
-                            {
-                                <div class="d-flex flex-column align-items-center">
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Medium">
-                                        <strong>@context.Item.ScoreTeam1 - @context.Item.ScoreTeam2</strong>
-                                    </MudChip>
-                                    @if (context.Item.FinishedType == MatchFinishedType.ExtraTime)
-                                    {
-                                        <MudText Typo="Typo.caption" Color="Color.Info">a.p.</MudText>
-                                    }
-                                    else if (context.Item.FinishedType == MatchFinishedType.Penalties)
-                                    {
-                                        <MudText Typo="Typo.caption" Color="Color.Warning">
-                                            t.a.b. (@GetPenaltyWinnerName(context.Item))
-                                        </MudText>
-                                    }
-                                </div>
-
-                                @if (isAdmin)
-                                {
-                                    <CalculateButton 
-                                        MatchId="@context.Item.MatchId"
-                                        ScoreTeam1="@context.Item.ScoreTeam1"
-                                        ScoreTeam2="@context.Item.ScoreTeam2"
-                                        OnCalculated="@LoadAllData" />
-                                }
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Tertiary">- vs -</MudText>
-                            }
-                        </div>
-                    </CellTemplate>
-                </TemplateColumn>
-
-                <!-- Mon Prono -->
-                <TemplateColumn Title="Mon Prono" Sortable="false">
-                    <CellTemplate>
-                        @if (userPronostics.TryGetValue(context.Item.MatchId, out var prono))
-                        {
-                            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Bolt">
-                                @prono.PredictedScoreTeam1 - @prono.PredictedScoreTeam2
-                            </MudChip>
-                        }
-                        else
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Tertiary">-</MudText>
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-
-                <!-- Status -->
-                <TemplateColumn Title="Statut" Sortable="true">
-                    <CellTemplate>
-                        <MudChip T="string" Color="@GetStatusMudColor(context.Item.Status)" Size="Size.Small">
-                            @GetStatusLabel(context.Item.Status)
-                        </MudChip>
-                    </CellTemplate>
-                </TemplateColumn>
-
-                <!-- Actions -->
-                <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
-                    <CellTemplate>
-                        <div class="d-flex gap-1">
-                            <!-- View Pronostics button (for everyone when match started) -->
-                            <ViewPronosticsButton 
-                                MatchId="@context.Item.MatchId"
-                                Status="@context.Item.Status" />
-                            <!-- Pronostic button (for all users) -->
-                            <PronosticButton Match="@context.Item"
-                                           HasPronostic="@userPronostics.ContainsKey(context.Item.MatchId)"
-                                           Size="Small"
-                                           OnPronosticSaved="@HandlePronosticSavedInGrid" />
-
-                            <!-- Admin actions -->
-                            @if (isAdmin)
-                            {
-                                <MudTooltip Text="Modifier">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                   Color="Color.Primary"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => EditMatch(context.Item))" />
-                                </MudTooltip>
-                                <MudTooltip Text="Supprimer">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   OnClick="@(() => ConfirmDelete(context.Item))" />
-                                </MudTooltip>
-                            }
-                        </div>
-                    </CellTemplate>
-                </TemplateColumn>
-            </Columns>
-            
-            <PagerContent>
-                <MudDataGridPager T="MatchDto" />
-            </PagerContent>
-
-            <NoRecordsContent>
-                <MudText Typo="Typo.body1" Align="Align.Center" Class="py-4">
-                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="me-2" />
-                    Aucun match trouvé avec ces critères.
-                </MudText>
-            </NoRecordsContent>
-        </MudDataGrid>
+        
+        @if (!filteredMatches.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Class="me-2" />
+                Aucun match trouvé avec ces critères.
+            </MudAlert>
+        }
+        else
+        {
+            <MudGrid Spacing="3">
+                @foreach (var match in filteredMatches)
+                {
+                    var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
+                    <MudItem xs="12" sm="6" lg="4">
+                        <MatchCard Match="@match"
+                                HasPronostic="@hasProno"
+                                UserPronostic="@prono"
+                                OnPronosticSaved="@HandlePronosticSavedInGrid"
+                                IsAdmin="@isAdmin"
+                                OnEdit="@EditMatch"
+                                OnDelete="@ConfirmDelete"
+                                OnCalculated="@LoadAllData" />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
     }
 </MudContainer>
 
@@ -378,13 +230,23 @@
             isLoading = false;
         }
     }
+    private void OnSearchChanged(string value)
+    {
+        searchString = value;
+        FilterMatches();
+        StateHasChanged();
+    }
     
     private void FilterMatches()
     {
         filteredMatches = allMatches.Where(m =>
-            (string.IsNullOrEmpty(filterPhase) || m.PhaseName == filterPhase) &&
-            (string.IsNullOrEmpty(filterGroup) || m.GroupLetter == filterGroup) &&
-            (string.IsNullOrEmpty(filterStatus) || m.Status.ToString() == filterStatus)
+            (string.IsNullOrEmpty(filterPhase)  || m.PhaseName == filterPhase) &&
+            (string.IsNullOrEmpty(filterGroup)  || m.GroupLetter == filterGroup) &&
+            (string.IsNullOrEmpty(filterStatus) || m.Status.ToString() == filterStatus) &&
+            (string.IsNullOrEmpty(searchString) ||
+                m.Team1Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                m.Team2Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                m.PhaseName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
         ).OrderBy(m => m.ScheduledDate).ToList();
     }
     private void OnPhaseChanged(string value)
@@ -409,16 +271,7 @@
         StateHasChanged();
     }
 
-    private Func<MatchDto, bool> QuickFilter => x =>
-    {
-        if (string.IsNullOrWhiteSpace(searchString))
-            return true;
-
-        var search = searchString.ToLower();
-        return x.Team1Name?.ToLower().Contains(search) == true
-            || x.Team2Name?.ToLower().Contains(search) == true
-            || x.PhaseName?.ToLower().Contains(search) == true;
-    };
+    
 
     private async Task HandlePronosticSavedInGrid(PronosticDto prono)
     {
@@ -650,29 +503,7 @@
         modalError = null;
     }
     #endregion
-    private Color GetStatusMudColor(MatchStatus status) => status switch
-    {
-        MatchStatus.Scheduled => Color.Default,
-        MatchStatus.Live => Color.Success,
-        MatchStatus.Finished => Color.Primary,
-        MatchStatus.Postponed => Color.Warning,
-        _ => Color.Default
-    };
     
-    private string GetStatusLabel(MatchStatus status) => status switch
-    {
-        MatchStatus.Scheduled => "Programmé",
-        MatchStatus.Live => "En cours",
-        MatchStatus.Finished => "Terminé",
-        MatchStatus.Postponed => "Reporté",
-        _ => status.ToString()
-    };
-    private string GetPenaltyWinnerName(MatchDto match) => match.PenaltyWinnerTeam switch
-    {
-        1 => match.Team1Name,
-        2 => match.Team2Name,
-        _ => "?"
-    };
 }
 
 <style>
