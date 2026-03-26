@@ -2,6 +2,7 @@
 @namespace PWA.Auth.Components.worldbet.PronosticModal
 @using dto.worldbet.Models
 @using dto.worldbet.Requests
+@using PWA.Auth.Components.worldbet.JokerButton
 @inject IPronosticService PronosticService
 @inject ILogger<PronosticModal> Logger
 
@@ -88,6 +89,33 @@
                     </div>
                 </div>
             </MudPaper>
+            
+            <MudPaper Elevation="0" Class="joker-section pa-3 mt-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Casino" 
+                                Color="@(useJoker ? Color.Warning : Color.Default)" 
+                                Size="Size.Medium" />
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                Utiliser un joker
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Double les points — @availableJokers restant@(availableJokers > 1 ? "s" : "")
+                            </MudText>
+                        </div>
+                    </div>
+                    <MudSwitch @bind-Value="useJoker"
+                            Color="Color.Warning"
+                            Disabled="@(!CanUseJoker)" />
+                </div>
+                @if (availableJokers == 0 && !hasExistingJoker)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                        Plus de jokers disponibles
+                    </MudAlert>
+                }
+            </MudPaper>
         </div>
     </DialogContent>
     <DialogActions>
@@ -118,6 +146,15 @@
     [Parameter] public MatchDto Match { get; set; } = null!;
     [Parameter] public EventCallback<PronosticDto> OnSaved { get; set; }
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    // Joker state
+    private bool useJoker = false;
+    private bool hasExistingJoker = false;
+    private int? savedPronosticId;
+    private bool hasJoker = false;
+    private int availableJokers = 0;
+    private bool CanUseJoker =>
+        (availableJokers > 0 || hasExistingJoker) &&
+        DateTime.UtcNow < Match.LockPronosticsAt;
 
     private int? team1Score;
     private int? team2Score;
@@ -127,6 +164,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadExistingPronostic();
+        await LoadJokers();
     }
 
     private async Task LoadExistingPronostic()
@@ -152,6 +190,23 @@
         }
     }
 
+    private async Task LoadJokers()
+    {
+        try
+        {
+            var jokers = await PronosticService.GetMyJokersAsync();
+            availableJokers = jokers.Available;
+
+            // Check if a joker is already placed on this match's pronostic
+            var existingProno = await PronosticService.GetMyPronosticForMatchAsync(Match.MatchId);
+            if (existingProno != null)
+            {
+                hasExistingJoker = jokers.Jokers.Any(j => j.PronosticId == existingProno.PronosticId);
+                useJoker = hasExistingJoker;
+            }
+        }
+        catch { }
+    }
     private async Task SavePronostic()
     {
         if (!team1Score.HasValue || !team2Score.HasValue)
@@ -171,6 +226,7 @@
 
         try
         {
+            // 1. Save pronostic
             var request = new CreatePronosticRequest
             {
                 MatchId = Match.MatchId,
@@ -179,8 +235,16 @@
             };
 
             var saved = await PronosticService.CreateOrUpdatePronosticAsync(request);
+
+            // 2. Handle joker — place or remove based on checkbox
+            if (useJoker && !hasExistingJoker)
+                await PronosticService.PlaceJokerAsync(saved.PronosticId);
+            else if (!useJoker && hasExistingJoker)
+                await PronosticService.RemoveJokerAsync(saved.PronosticId);
+
+            saved.HasJoker = useJoker;
             await OnSaved.InvokeAsync(saved);
-            MudDialog.Close(DialogResult.Ok(saved)); // ferme et passe le résultat au parent
+            MudDialog.Close(DialogResult.Ok(saved));
         }
         catch (Exception ex)
         {
@@ -191,6 +255,12 @@
         {
             isSaving = false;
         }
+    }
+    private async Task HandleJokerChanged(PlayerJokersDto jokers)
+    {
+        availableJokers = jokers.Available;
+        hasJoker = jokers.Jokers.Any(j => j.PronosticId == savedPronosticId);
+        StateHasChanged();
     }
 
     private void Close()
@@ -255,5 +325,10 @@
         flex-direction: column;
         align-items: center;
         gap: 0.4rem;
+    }
+    .joker-section {
+        background: var(--mud-palette-background-grey);
+        border-radius: 8px;
+        border: 1px solid var(--mud-palette-divider);
     }
 </style>

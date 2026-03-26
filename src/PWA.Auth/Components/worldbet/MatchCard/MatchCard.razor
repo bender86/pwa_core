@@ -107,6 +107,12 @@
                     Mon prono :
                     <strong>@UserPronostic.PredictedScoreTeam1 - @UserPronostic.PredictedScoreTeam2</strong>
                 </MudText>
+                @if (UserPronostic.HasJoker)
+                {
+                    <MudTooltip Text="Joker placé — points x2">
+                        <MudIcon Icon="@Icons.Material.Filled.Casino" Color="Color.Warning" Size="Size.Small" />
+                    </MudTooltip>
+                }
                 @if (Match.Status == MatchStatus.Finished && UserPronostic.PointsEarned >= 0)
                 {
                     <MudChip T="string" Size="Size.Small" Color="@GetPointsColor(UserPronostic.PointsEarned)">

@@ -11,4 +11,7 @@ public interface IPronosticService
     Task<PronosticDto?> GetMyPronosticForMatchAsync(int matchId);
     Task<MatchPronosticsDto> GetMatchPronosticsAsync(int matchId);
     Task DeletePronosticAsync(int pronosticId);
+    Task<PlayerJokersDto> GetMyJokersAsync();
+    Task<PlayerJokersDto> PlaceJokerAsync(int pronosticId);
+    Task<PlayerJokersDto> RemoveJokerAsync(int pronosticId);
 }

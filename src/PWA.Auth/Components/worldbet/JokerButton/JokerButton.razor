@@ -1,0 +1,100 @@
+@* Components/worldbet/JokerButton/JokerButton.razor *@
+@namespace PWA.Auth.Components.worldbet.JokerButton
+@using dto.worldbet.Models
+@inject IPronosticService PronosticService
+@inject ISnackbar Snackbar
+
+@if (PronosticId.HasValue)
+{
+    <div class="joker-wrap">
+        <MudTooltip Text="@TooltipText">
+            <MudButton Variant="Variant.Outlined"
+                       Color="@(HasJoker ? Color.Warning : Color.Default)"
+                       StartIcon="@(HasJoker ? Icons.Material.Filled.Casino : Icons.Material.Outlined.Casino)"
+                       Size="Size.Small"
+                       Disabled="@(!CanToggle || isLoading)"
+                       OnClick="ToggleJoker"
+                       Class="@(HasJoker ? "joker-active" : "")">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-1" />
+                }
+                @(HasJoker ? "Joker actif" : "Joker")
+            </MudButton>
+        </MudTooltip>
+
+        @if (AvailableJokers == 0 && !HasJoker)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">
+                Plus de jokers disponibles
+            </MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                @AvailableJokers joker@(AvailableJokers > 1 ? "s" : "") restant@(AvailableJokers > 1 ? "s" : "")
+            </MudText>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int? PronosticId { get; set; }
+    [Parameter] public bool HasJoker { get; set; }
+    [Parameter] public int AvailableJokers { get; set; }
+    [Parameter] public bool CanToggle { get; set; }
+    [Parameter] public EventCallback<PlayerJokersDto> OnJokerChanged { get; set; }
+
+    private bool isLoading = false;
+
+    private string TooltipText => HasJoker
+        ? "Retirer le joker (points x2 annulé)"
+        : CanToggle && AvailableJokers > 0
+            ? "Placer un joker sur ce pronostic (points x2)"
+            : !CanToggle
+                ? "Match verrouillé"
+                : "Plus de jokers disponibles";
+
+    private async Task ToggleJoker()
+    {
+        if (!PronosticId.HasValue) return;
+
+        isLoading = true;
+        try
+        {
+            PlayerJokersDto result;
+            if (HasJoker)
+            {
+                result = await PronosticService.RemoveJokerAsync(PronosticId.Value);
+                Snackbar.Add("Joker retiré", Severity.Info);
+            }
+            else
+            {
+                result = await PronosticService.PlaceJokerAsync(PronosticId.Value);
+                Snackbar.Add("Joker placé ! Points x2 🃏", Severity.Success);
+            }
+            await OnJokerChanged.InvokeAsync(result);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur : {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+
+<style>
+    .joker-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .joker-active {
+        background: rgba(255, 167, 38, 0.1) !important;
+        border-color: var(--mud-palette-warning) !important;
+    }
+</style>

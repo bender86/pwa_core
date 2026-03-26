@@ -49,4 +49,28 @@ public class PronosticService : IPronosticService
         var response = await _apiClient.DeleteAsync($"pronostic/{pronosticId}");
         response.EnsureSuccessStatusCode();
     }
+    
+    public async Task<PlayerJokersDto> GetMyJokersAsync()
+    {
+        return await _apiClient.GetFromJsonAsync<PlayerJokersDto>(
+            "pronostic/jokers") ?? new();
+    }
+
+    public async Task<PlayerJokersDto> PlaceJokerAsync(int pronosticId)
+    {
+        var response = await _apiClient.PostAsJsonAsync(
+            $"pronostic/jokers/place/{pronosticId}", new { });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<PlayerJokersDto>()
+            ?? throw new Exception("Erreur lors du placement du joker");
+    }
+
+    public async Task<PlayerJokersDto> RemoveJokerAsync(int pronosticId)
+    {
+        var response = await _apiClient.DeleteAsync(
+            $"pronostic/jokers/remove/{pronosticId}");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<PlayerJokersDto>()
+            ?? throw new Exception("Erreur lors du retrait du joker");
+    }
 }

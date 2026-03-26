@@ -114,6 +114,73 @@
         </MudGrid>
     </MudPaper>
 
+    <!-- Jokers -->
+    <MudPaper Elevation="2" Class="pa-5 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Casino" Class="me-2" Color="Color.Warning" />
+            Jokers
+        </MudText>
+        <MudDivider Class="mb-3" />
+        <MudText Class="mb-4">
+            Chaque joueur dispose de <strong>3 jokers</strong> à utiliser sur les pronostics de son choix.
+            Placer un joker sur un pronostic <strong>double les points gagnés</strong> pour ce match.
+        </MudText>
+        <MudGrid Spacing="2" Class="mb-4">
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4 text-center" Style="border: 2px solid var(--mud-palette-warning); border-radius: 10px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Casino" Color="Color.Warning" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Class="mt-2"><strong>3</strong></MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Jokers par joueur</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4 text-center" Style="border: 2px solid var(--mud-palette-success); border-radius: 10px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Success" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Class="mt-2"><strong>x2</strong></MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Points multipliés</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4 text-center" Style="border: 2px solid var(--mud-palette-info); border-radius: 10px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Placé/retiré avant le verrouillage du match</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudSimpleTable Hover="true" Bordered="true" Dense="true" Class="mb-3">
+            <thead>
+                <tr>
+                    <th>Situation</th>
+                    <th>Points sans joker</th>
+                    <th>Points avec joker</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #e8f5e9;">
+                    <td>Score exact</td>
+                    <td><MudChip T="string" Color="Color.Success" Size="Size.Small">3 pts</MudChip></td>
+                    <td><MudChip T="string" Color="Color.Warning" Size="Size.Small">6 pts</MudChip></td>
+                </tr>
+                <tr style="background: #fff8e1;">
+                    <td>Bon vainqueur</td>
+                    <td><MudChip T="string" Color="Color.Warning" Size="Size.Small">1 pt</MudChip></td>
+                    <td><MudChip T="string" Color="Color.Warning" Size="Size.Small">2 pts</MudChip></td>
+                </tr>
+                <tr style="background: #ffebee;">
+                    <td>Mauvais résultat</td>
+                    <td><MudChip T="string" Color="Color.Error" Size="Size.Small">0 pt</MudChip></td>
+                    <td><MudChip T="string" Color="Color.Error" Size="Size.Small">0 pt</MudChip></td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+
+        <MudAlert Severity="Severity.Info" Dense="true">
+            Un joker peut être déplacé sur un autre match tant que le match original n'est pas verrouillé.
+            Si le joker est placé sur un match où tu ne marques pas de points, le joker est perdu.
+        </MudAlert>
+    </MudPaper>
+
     <!-- Matches à élimination directe -->
     <MudPaper Elevation="2" Class="pa-5 mb-4">
         <MudText Typo="Typo.h6" Class="mb-3">
