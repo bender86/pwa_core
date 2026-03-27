@@ -1,73 +1,98 @@
+@* Components/MfaVerification/MfaVerification.razor *@
+
 @if (ShowQrCode && !string.IsNullOrEmpty(QrCodeBase64))
 {
-    <!-- QR Code pour setup initial -->
-    <div class="qr-setup">
-        <h4>?? Scan this QR Code</h4>
-        <p>Use Google Authenticator or similar app</p>
-        <img src="@QrCodeBase64" alt="QR Code" class="qr-code" />
-        
+    <div class="text-center mb-4">
+        <MudText Typo="Typo.h6" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.QrCode2" Class="me-2" />
+            Scannez le QR code
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            Utilisez Google Authenticator ou une application similaire
+        </MudText>
+        <img src="@QrCodeBase64" alt="QR Code" style="width: 60%; border-radius: 8px;" />
+
         @if (!string.IsNullOrEmpty(SecretKey))
         {
-            <div class="secret-key">
-                <small>Manual key:</small>
-                <code>@SecretKey</code>
+            <div class="mt-3">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Clé manuelle :</MudText>
+                <MudPaper Elevation="0" Class="pa-2 mt-1"
+                          Style="background: var(--mud-palette-background-grey); border-radius: 6px;">
+                    <code style="font-size: 0.85rem; word-break: break-all;">@SecretKey</code>
+                </MudPaper>
             </div>
         }
     </div>
+
+    <MudDivider Class="mb-4" />
 }
 
-<!-- Formulaire de code MFA (toujours visible) -->
-<div class="mfa-code-form">
+@* Header *@
+<div class="text-center mb-4">
     @if (!ShowQrCode)
     {
-        <h4>?? Enter Authentication Code</h4>
-        <p>Open your authenticator app and enter the 6-digit code</p>
+        <MudIcon Icon="@Icons.Material.Filled.PhonelinkLock"
+                 Color="Color.Primary"
+                 Style="font-size: 3rem;" />
+        <MudText Typo="Typo.h6" Class="mt-2 mb-1">Code d'authentification</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Ouvrez votre application et entrez le code à 6 chiffres
+        </MudText>
     }
     else
     {
-        <!-- Mode Verify: Pas de QR, juste demander le code -->
-        <h4>🔐 Vérification MFA</h4>
-        <p class="instruction">@PromptMessage</p>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">@PromptMessage</MudText>
     }
-    
-    <input type="text" 
-           @bind="code" 
-           maxlength="6" 
-           class="form-control code-input" 
-           placeholder="123456"
-           @onkeyup="HandleKeyUp" />
-    
-    @if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-        <div class="alert alert-danger">
-            @ErrorMessage
-        </div>
-    }
-    
-    <div class="button-group">
-        <button class="btn btn-primary" @onclick="SubmitCode" disabled="@IsLoading">
-            @if (IsLoading)
-            {
-                <span class="spinner-border spinner-border-sm"></span>
-                <span>Verifying...</span>
-            }
-            else
-            {
-                <span>Verify</span>
-            }
-        </button>
-        
-        <button class="btn btn-link" @onclick="Cancel" disabled="@IsLoading">
-            Cancel
-        </button>
-    </div>
 </div>
 
-<style>
-    .qr-code{
-        width:60%;
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3">@ErrorMessage</MudAlert>
+}
+
+<MudTextField T="string"
+              @bind-Value="code"
+              Label="Code à 6 chiffres"
+              Variant="Variant.Outlined"
+              MaxLength="6"
+              Placeholder="123456"
+              InputType="InputType.Number"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Key"
+              Disabled="@IsLoading"
+              @onkeyup="HandleKeyUp"
+              Class="mb-4"
+              Style="text-align: center; letter-spacing: 0.5rem;" />
+
+<MudButton Variant="Variant.Filled"
+           Color="Color.Primary"
+           FullWidth="true"
+           Size="Size.Large"
+           Disabled="@(IsLoading || code.Length != 6)"
+           OnClick="SubmitCode"
+           Class="mb-2">
+    @if (IsLoading)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+        <span>Vérification...</span>
     }
-</style>
+    else
+    {
+        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Class="me-2" />
+        <span>Vérifier</span>
+    }
+</MudButton>
+
+@if (ShowCancelButton)
+{
+    <MudButton Variant="Variant.Text"
+               Color="Color.Default"
+               FullWidth="true"
+               Disabled="@IsLoading"
+               OnClick="Cancel">
+        Annuler
+    </MudButton>
+}
 
 @code {
     [Parameter] public bool IsLoading { get; set; }
@@ -76,28 +101,22 @@
     [Parameter] public string? QrCodeBase64 { get; set; }
     [Parameter] public string? SecretKey { get; set; }
     [Parameter] public bool ShowCancelButton { get; set; } = true;
+    [Parameter] public string PromptMessage { get; set; } = "Entrez votre code d'authentification à deux facteurs";
     [Parameter] public EventCallback<string> OnMfaCodeSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
-    
-    // ✅ Ajouter ce paramètre
-    [Parameter] public string PromptMessage { get; set; } = "Entrez votre code d'authentification à deux facteurs";
 
     private string code = "";
 
     private async Task SubmitCode()
     {
-        if (string.IsNullOrEmpty(code) || code.Length != 6)
-            return;
-            
+        if (string.IsNullOrEmpty(code) || code.Length != 6) return;
         await OnMfaCodeSubmit.InvokeAsync(code);
     }
 
     private void HandleKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && code.Length == 6)
-        {
             _ = SubmitCode();
-        }
     }
 
     private async Task Cancel()

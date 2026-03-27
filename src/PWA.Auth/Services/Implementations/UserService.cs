@@ -137,23 +137,12 @@ namespace PWA.Auth.Services
             try
             {
                 _logger.LogInformation("Changement de mot de passe: {UserId}", request.UserId);
-
                 var response = await _httpClient.PostAsJsonAsync(
-                    $"user/{request.UserId}/change-password",
-                    request
-                );
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogWarning("Échec changement mot de passe: {StatusCode}", response.StatusCode);
-                    return ApiResponse<object>.ErrorResponse(
-                        "Erreur lors du changement de mot de passe",
-                        (int)response.StatusCode
-                    );
-                }
+                    $"user/{request.UserId}/change-password", request);
 
-                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
-                return result ?? ApiResponse<object>.ErrorResponse("Réponse invalide", 500);
+                return await response.Content.ReadFromJsonAsync<ApiResponse<object>>()
+                    ?? ApiResponse<object>.ErrorResponse("Erreur inconnue");
+
             }
             catch (Exception ex)
             {

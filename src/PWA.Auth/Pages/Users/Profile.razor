@@ -1,5 +1,5 @@
 @page "/profile"
-@page "/user/profile"  
+@page "/user/profile"
 @attribute [Authorize]
 @using dto.user.Models
 @using PWA.Auth.Models
@@ -7,359 +7,245 @@
 @inject IJSRuntime JS
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject WorldBetApiClient WorldBetApi
-
 @inject IUserService UserService
 @inject IMfaService MfaService
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>Mon profil - MaesAuth</PageTitle>
 
-<div class="profile-page">
-    <div class="profile-container">
-        <div class="profile-header">
-            <h2>👤 Mon Profil</h2>
-            <p class="subtitle">Gérer vos informations personnelles</p>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-4">
+
+    <MudText Typo="Typo.h4" Class="mb-1">
+        <MudIcon Icon="@Icons.Material.Filled.Person" Class="me-2" />
+        Mon Profil
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+        Gérer vos informations personnelles
+    </MudText>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <MudText Class="mt-3" Color="Color.Secondary">Chargement...</MudText>
         </div>
+    }
+    else if (model == null)
+    {
+        <MudAlert Severity="Severity.Error">
+            Impossible de charger votre profil. Veuillez vous reconnecter.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
 
-        @if (isLoading)
-        {
-            <div class="loading-spinner">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Chargement...</span>
-                </div>
-            </div>
-        }
-        else if (model != null)
-        {
-            <div class="profile-content">
-                @if (!string.IsNullOrEmpty(successMessage))
-                {
-                    <div class="alert alert-success">
-                        ✅ @successMessage
+            <!-- Informations personnelles -->
+            <MudItem xs="12">
+                <MudPaper Elevation="2" Style="overflow: hidden;">
+                    <div style="background: var(--mud-palette-primary); padding: 0.75rem 1rem;">
+                        <MudText Typo="Typo.body1" Style="color: white; font-weight: 500;">
+                            <MudIcon Icon="@Icons.Material.Filled.Badge" Class="me-2" Size="Size.Small" />
+                            Informations personnelles
+                        </MudText>
                     </div>
-                }
-
-                <!-- ✅ UserForm pour les champs classiques (SANS MFA dedans) -->
-                <UserForm Mode="FormMode.Edit"
-                          InitialData="@model"
-                          OnSubmit="HandleUpdateProfile"
-                          OnCancel="LoadProfile"
-                          IsLoading="@isSaving"
-                          ErrorMessage="@errorMessage"
-                          ShowAdminOptions="false"
-                          ShowCancelButton="true" />
-                <!-- ✅ Section enable notif avec son propre toggle -->
-                <div class="mfa-section">
-                    <h4>🔔 Notifications WorldBet</h4>
-
-                    @if (!_notifSupported)
-                    {
-                        <MudAlert Severity="Severity.Warning" Dense="true">
-                            Non disponible dans ce navigateur.<br />
-                            Sur iPhone : <strong>Safari → Partager → Sur l'écran d'accueil</strong>
-                        </MudAlert>
-                    }
-                    else if (_notifPermission == "denied")
-                    {
-                        <MudAlert Severity="Severity.Error" Dense="true">
-                            Permission refusée — réactivez les notifications dans les réglages du navigateur.
-                        </MudAlert>
-                    }
-                    else
-                    {
-                        <MudSwitch T="bool"
-                                Value="_notifSubscribed"
-                                ValueChanged="HandleNotifToggle"
-                                Color="Color.Primary"
-                                Disabled="_notifLoading"
-                                Label="@(_notifSubscribed ? "Activées" : "Désactivées")" />
-
-                        <small class="mfa-status">
-                            @if (_notifSubscribed)
-                            {
-                                <span class="status-active">✓ Rappel automatique 1h avant chaque match non pronostiqué</span>
-                            }
-                            else
-                            {
-                                <span class="status-inactive">Active les rappels pour ne plus rater un pronostic</span>
-                            }
-                        </small>
-
-                        @if (_notifSubscribed)
-                        {
-                            <div class="mt-2">
-                                <button type="button"
-                                        class="btn btn-outline-secondary btn-sm"
-                                        @onclick="SendTestNotifAsync"
-                                        disabled="@_notifLoading">
-                                    @if (_notifLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-1"></span>
-                                    }
-                                    📨 Envoyer une notif de test
-                                </button>
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrEmpty(_notifMessage))
-                        {
-                            <small class="d-block mt-2 @(_notifError ? "status-inactive" : "status-active")">
-                                @_notifMessage
-                            </small>
-                        }
-                    }
-                </div>
-                <!-- ✅ Section MFA séparée avec son propre toggle -->
-                <div class="mfa-section">
-                    <h4>🔐 Sécurité</h4>
-                    <div class="form-check">
-                        <input type="checkbox" 
-                               class="form-check-input" 
-                               id="mfaToggle"
-                               checked="@currentMfaEnabled"
-                               @onchange="HandleMfaToggle"
-                               disabled="@isSaving" />
-                        <label class="form-check-label" for="mfaToggle">
-                            Authentification à deux facteurs (MFA)
-                        </label>
+                    <div class="pa-4">
+                        <UserForm Mode="FormMode.Edit"
+                                  InitialData="@model"
+                                  OnSubmit="HandleUpdateProfile"
+                                  OnCancel="LoadProfile"
+                                  IsLoading="@isSaving"
+                                  ErrorMessage="@errorMessage"
+                                  ShowAdminOptions="false"
+                                  ShowCancelButton="true" />
                     </div>
-                    <small class="mfa-status">
-                        @if (currentMfaEnabled)
+                </MudPaper>
+            </MudItem>
+
+            <!-- Notifications WorldBet -->
+            <MudItem xs="12">
+                <MudPaper Elevation="2" Style="overflow: hidden;">
+                    <div style="background: var(--mud-palette-primary); padding: 0.75rem 1rem;">
+                        <MudText Typo="Typo.body1" Style="color: white; font-weight: 500;">
+                            <MudIcon Icon="@Icons.Material.Filled.Notifications" Class="me-2" Size="Size.Small" />
+                            Notifications WorldBet
+                        </MudText>
+                    </div>
+                    <div class="pa-4">
+                        @if (!_notifSupported)
                         {
-                            <span class="status-active">✓ MFA activé - Votre compte est protégé</span>
+                            <MudAlert Severity="Severity.Warning" Dense="true">
+                                Non disponible dans ce navigateur.<br />
+                                Sur iPhone : <strong>Safari → Partager → Sur l'écran d'accueil</strong>
+                            </MudAlert>
+                        }
+                        else if (_notifPermission == "denied")
+                        {
+                            <MudAlert Severity="Severity.Error" Dense="true">
+                                Permission refusée — réactivez les notifications dans les réglages du navigateur.
+                            </MudAlert>
                         }
                         else
                         {
-                            <span class="status-inactive">⚠️ MFA désactivé - Activez-le pour plus de sécurité</span>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <MudSwitch T="bool"
+                                           Value="_notifSubscribed"
+                                           ValueChanged="HandleNotifToggle"
+                                           Color="Color.Primary"
+                                           Disabled="_notifLoading"
+                                           Label="@(_notifSubscribed ? "Activées" : "Désactivées")" />
+                                @if (_notifLoading)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                }
+                            </div>
+
+                            <MudText Typo="Typo.caption"
+                                     Color="@(_notifSubscribed ? Color.Success : Color.Warning)">
+                                @if (_notifSubscribed)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="me-1" />
+                                    <span>Rappel automatique 1h avant chaque match non pronostiqué</span>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="me-1" />
+                                    <span>Active les rappels pour ne plus rater un pronostic</span>
+                                }
+                            </MudText>
+
+                            @if (_notifSubscribed)
+                            {
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Default"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Send"
+                                           Disabled="_notifLoading"
+                                           OnClick="SendTestNotifAsync"
+                                           Class="mt-3">
+                                    Envoyer une notif de test
+                                </MudButton>
+                            }
+
+                            @if (!string.IsNullOrEmpty(_notifMessage))
+                            {
+                                <MudText Typo="Typo.caption"
+                                         Color="@(_notifError ? Color.Error : Color.Success)"
+                                         Class="d-block mt-2">
+                                    @_notifMessage
+                                </MudText>
+                            }
                         }
-                    </small>
-                </div>
+                    </div>
+                </MudPaper>
+            </MudItem>
 
-                <!-- Section changement de mot de passe -->
-                <div class="password-section">
-                    <p class="text-muted">
-                        Pour changer votre mot de passe, utilisez la page dédiée.
-                    </p>
-                    <button type="button" 
-                            class="btn btn-outline-secondary btn-block"
-                            @onclick="NavigateToChangePassword"
-                            disabled="@isSaving">
-                        🔑 Changer mon mot de passe
-                    </button>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="alert alert-danger">
-                Impossible de charger votre profil. Veuillez vous reconnecter.
-            </div>
-        }
-    </div>
-</div>
+            <!-- Sécurité -->
+            <MudItem xs="12">
+                <MudPaper Elevation="2" Style="overflow: hidden;">
+                    <div style="background: var(--mud-palette-primary); padding: 0.75rem 1rem;">
+                        <MudText Typo="Typo.body1" Style="color: white; font-weight: 500;">
+                            <MudIcon Icon="@Icons.Material.Filled.Security" Class="me-2" Size="Size.Small" />
+                            Sécurité
+                        </MudText>
+                    </div>
+                    <div class="pa-4">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div>
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">
+                                    Authentification à deux facteurs (MFA)
+                                </MudText>
+                                <MudText Typo="Typo.caption"
+                                         Color="@(currentMfaEnabled ? Color.Success : Color.Warning)">
+                                    @if (currentMfaEnabled)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="me-1" />
+                                        <span>Activé — votre compte est protégé</span>
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.ShieldMoon" Size="Size.Small" Class="me-1" />
+                                        <span>Désactivé — activez-le pour plus de sécurité</span>
+                                    }
+                                </MudText>
+                            </div>
+                            <MudSwitch T="bool"
+                                       Value="currentMfaEnabled"
+                                       ValueChanged="HandleMfaToggle"
+                                       Color="Color.Primary"
+                                       Disabled="@isSaving" />
+                        </div>
 
-<!-- ✅ Modale Setup MFA (Enable avec QR Code) -->
-@if (showMfaSetupModal)
-{
-    <div class="modal-overlay" @onclick="CloseMfaSetupModal">
-        <div class="modal-content" @onclick:stopPropagation>
-            <div class="modal-header">
-                <h3>Activer l'authentification à deux facteurs</h3>
-                <button class="btn-close" @onclick="CloseMfaSetupModal">×</button>
-            </div>
-            <div class="modal-body">
-                <MfaVerification 
-                    IsLoading="@isMfaSetupLoading"
-                    ErrorMessage="@mfaSetupError"
-                    ShowQrCode="true"
-                    QrCodeBase64="@mfaQrCode"
-                    SecretKey="@mfaSecretKey"
-                    PromptMessage="Scannez le QR code puis entrez un code pour confirmer"
-                    ShowCancelButton="true"
-                    OnMfaCodeSubmit="HandleMfaEnableVerify"
-                    OnCancel="CloseMfaSetupModal" />
-            </div>
+                        <MudDivider Class="my-3" />
+
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   StartIcon="@Icons.Material.Filled.Key"
+                                   OnClick="NavigateToChangePassword"
+                                   Disabled="@isSaving">
+                            Changer mon mot de passe
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+        </MudGrid>
+    }
+</MudContainer>
+
+<!-- Modal MFA Setup (Enable) -->
+<MudDialog @bind-Visible="showMfaSetupModal"
+           Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PhonelinkLock" Class="me-2" />
+            Activer l'authentification à deux facteurs
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-2">
+            <MfaVerification IsLoading="@isMfaSetupLoading"
+                             ErrorMessage="@mfaSetupError"
+                             ShowQrCode="true"
+                             QrCodeBase64="@mfaQrCode"
+                             SecretKey="@mfaSecretKey"
+                             PromptMessage="Scannez le QR code puis entrez un code pour confirmer"
+                             ShowCancelButton="true"
+                             OnMfaCodeSubmit="HandleMfaEnableVerify"
+                             OnCancel="CloseMfaSetupModal" />
         </div>
-    </div>
-}
+    </DialogContent>
+</MudDialog>
 
-<!-- ✅ Modale Disable MFA (Demande code actuel) -->
-@if (showMfaDisableModal)
-{
-    <div class="modal-overlay" @onclick="CloseMfaDisableModal">
-        <div class="modal-content" @onclick:stopPropagation>
-            <div class="modal-header">
-                <h3>Désactiver l'authentification à deux facteurs</h3>
-                <button class="btn-close" @onclick="CloseMfaDisableModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    ⚠️ Attention : Désactiver MFA réduira la sécurité de votre compte.
-                </div>
-                <MfaVerification 
-                    IsLoading="@isMfaDisableLoading"
-                    ErrorMessage="@mfaDisableError"
-                    ShowQrCode="false"
-                    PromptMessage="Pour désactiver MFA, entrez votre code actuel"
-                    ShowCancelButton="true"
-                    OnMfaCodeSubmit="HandleMfaDisableVerify"
-                    OnCancel="CloseMfaDisableModal" />
-            </div>
+<!-- Modal MFA Disable -->
+<MudDialog @bind-Visible="showMfaDisableModal"
+           Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.NoEncryption" Class="me-2" />
+            Désactiver l'authentification à deux facteurs
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-2">
+            <MudAlert Severity="Severity.Warning" Class="mb-3">
+                Désactiver MFA réduira la sécurité de votre compte.
+            </MudAlert>
+            <MfaVerification IsLoading="@isMfaDisableLoading"
+                             ErrorMessage="@mfaDisableError"
+                             ShowQrCode="false"
+                             PromptMessage="Pour désactiver MFA, entrez votre code actuel"
+                             ShowCancelButton="true"
+                             OnMfaCodeSubmit="HandleMfaDisableVerify"
+                             OnCancel="CloseMfaDisableModal" />
         </div>
-    </div>
-}
-
-<style>
-    /* ... Gardez tous vos styles existants ... */
-    
-    /* ✅ Ajoutez ces nouveaux styles pour MFA */
-    .mfa-section {
-        margin-top: 2rem;
-        padding: 1.5rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-    }
-
-    .mfa-section h4 {
-        margin: 0 0 1rem 0;
-        color: #333;
-        font-size: 1.1rem;
-    }
-
-    .form-check {
-        padding: 1rem;
-        background: white;
-        border-radius: 6px;
-        margin-bottom: 0.5rem;
-    }
-
-    .form-check-input {
-        width: 1.2rem;
-        height: 1.2rem;
-        margin-right: 0.5rem;
-        cursor: pointer;
-    }
-
-    .form-check-label {
-        cursor: pointer;
-        font-size: 1rem;
-    }
-
-    .mfa-status {
-        display: block;
-        margin-top: 0.5rem;
-        font-size: 0.85rem;
-    }
-
-    .status-active {
-        color: #28a745;
-    }
-
-    .status-inactive {
-        color: #ffc107;
-    }
-
-    /* Styles Modal */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        animation: fadeIn 0.2s ease-out;
-    }
-
-    @@keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    .modal-content {
-        background: white;
-        border-radius: 12px;
-        max-width: 500px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        animation: slideDown 0.3s ease-out;
-    }
-
-    @@eyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .modal-header {
-        padding: 1.5rem;
-        border-bottom: 1px solid #e0e0e0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .modal-header h3 {
-        margin: 0;
-        color: #333;
-        font-size: 1.2rem;
-    }
-
-    .btn-close {
-        background: none;
-        border: none;
-        font-size: 2rem;
-        line-height: 1;
-        color: #999;
-        cursor: pointer;
-        padding: 0;
-        width: 2rem;
-        height: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        transition: all 0.2s;
-    }
-
-    .btn-close:hover {
-        background: #f0f0f0;
-        color: #333;
-    }
-
-    .modal-body {
-        padding: 0;
-        margin-left:10px;
-    }
-
-    .alert-warning {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
-        padding: 1rem;
-        border-radius: 6px;
-        margin: 1rem 1.5rem;
-    }
-
-    @@media (max-width: 768px) {
-        .modal-content {
-            width: 95%;
-        }
-    }
-</style>
+    </DialogContent>
+</MudDialog>
 
 @code {
-    #region notifications
+    #region Notifications
     private bool _notifSupported  = false;
     private bool _notifSubscribed = false;
     private bool _notifLoading    = false;
@@ -367,32 +253,27 @@
     private string? _notifMessage;
     private bool _notifError;
     #endregion
+
     private UserFormModel? model;
     private bool isLoading = true;
     private bool isSaving = false;
     private string? errorMessage;
-    private string? successMessage;
-    
-    // ✅ MFA state
+
     private bool currentMfaEnabled = false;
     private int currentUserId;
-    
-    // ✅ MFA Setup Modal (Enable)
+
     private bool showMfaSetupModal = false;
     private bool isMfaSetupLoading = false;
     private string? mfaSetupError;
     private string? mfaQrCode;
     private string? mfaSecretKey;
-    
-    // ✅ MFA Disable Modal
+
     private bool showMfaDisableModal = false;
     private bool isMfaDisableLoading = false;
     private string? mfaDisableError;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadProfile();
-    }
+    protected override async Task OnInitializedAsync() => await LoadProfile();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
@@ -404,23 +285,19 @@
     {
         isLoading = true;
         errorMessage = null;
-        successMessage = null;
-
         try
         {
             var currentUser = await UserService.GetCurrentUser();
-
             if (currentUser != null)
             {
-                currentUserId = currentUser.Id;
+                currentUserId    = currentUser.Id;
                 currentMfaEnabled = (bool)currentUser.MfaEnabled;
-                
                 model = new UserFormModel
                 {
-                    Id = currentUser.Id,
-                    FirstName = currentUser.FirstName ?? "",
-                    LastName = currentUser.LastName ?? "",
-                    Email = currentUser.Email,
+                    Id         = currentUser.Id,
+                    FirstName  = currentUser.FirstName ?? "",
+                    LastName   = currentUser.LastName ?? "",
+                    Email      = currentUser.Email,
                     MfaEnabled = (bool)currentUser.MfaEnabled
                 };
             }
@@ -439,35 +316,25 @@
         }
     }
 
-    // ✅ Handler pour mise à jour profil classique (FirstName, LastName, Email)
-    // ⚠️ NE TOUCHE PAS au MFA !
     private async Task HandleUpdateProfile(UserFormModel updatedModel)
     {
         if (updatedModel == null) return;
-
         isSaving = true;
         errorMessage = null;
-        successMessage = null;
-
         try
         {
-            var request = new UpdateUserRequest
+            var result = await UserService.UpdateUser(new UpdateUserRequest
             {
-                Id = updatedModel.Id,
+                Id        = updatedModel.Id,
                 FirstName = updatedModel.FirstName,
-                LastName = updatedModel.LastName,
-                Email = updatedModel.Email,
-                Active = updatedModel.Active
-                // ⚠️ NE PAS envoyer MfaEnabled ici !
-            };
-
-            var result = await UserService.UpdateUser(request);
+                LastName  = updatedModel.LastName,
+                Email     = updatedModel.Email,
+                Active    = updatedModel.Active
+            });
 
             if (result.Success)
             {
-                successMessage = "Profil mis à jour avec succès !";
-                await Task.Delay(1500);
-                successMessage = null;
+                Snackbar.Add("Profil mis à jour avec succès !", Severity.Success);
                 await LoadProfile();
             }
             else
@@ -485,76 +352,48 @@
         }
     }
 
-    // ✅ Handler séparé pour le toggle MFA
-    private async Task HandleMfaToggle(ChangeEventArgs e)
+    private async Task HandleMfaToggle(bool newValue)
     {
-        bool newValue = (bool)e.Value!;
-
         if (newValue && !currentMfaEnabled)
-        {
-            // Enable MFA → Ouvre modale avec QR code
             await InitiateMfaSetup();
-        }
         else if (!newValue && currentMfaEnabled)
-        {
-            // Disable MFA → Ouvre modale pour demander code
             InitiateMfaDisable();
-        }
     }
 
-    // ========== MFA ENABLE WORKFLOW ==========
-    
     private async Task InitiateMfaSetup()
     {
         isMfaSetupLoading = true;
         mfaSetupError = null;
-
         try
         {
             var result = await MfaService.SetupMfa(currentUserId);
-
             if (result.Success && result.Data != null)
             {
-                mfaQrCode = result.Data.QrCodeBase64;
-                mfaSecretKey = result.Data.SecretKey;
-            Console.WriteLine($"?? QR Code length: {mfaQrCode?.Length}");
-            Console.WriteLine($"?? Secret Key: {mfaSecretKey}");
-            Console.WriteLine("?? Opening modal...");
-            
+                mfaQrCode     = result.Data.QrCodeBase64;
+                mfaSecretKey  = result.Data.SecretKey;
                 showMfaSetupModal = true;
-                StateHasChanged();
             }
             else
             {
                 errorMessage = result.ErrorMessage ?? "Erreur lors de l'initialisation MFA";
             }
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Erreur : {ex.Message}";
-        }
-        finally
-        {
-            isMfaSetupLoading = false;
-        }
+        catch (Exception ex) { errorMessage = $"Erreur : {ex.Message}"; }
+        finally { isMfaSetupLoading = false; }
     }
 
     private async Task HandleMfaEnableVerify(string code)
     {
         isMfaSetupLoading = true;
         mfaSetupError = null;
-
         try
         {
             var result = await MfaService.EnableMfa(currentUserId, code);
-
             if (result.Success)
             {
                 currentMfaEnabled = true;
-                successMessage = "🎉 MFA activé avec succès !";
+                Snackbar.Add("MFA activé avec succès !", Severity.Success);
                 CloseMfaSetupModal();
-                await Task.Delay(1500);
-                successMessage = null;
                 await LoadProfile();
             }
             else
@@ -562,14 +401,8 @@
                 mfaSetupError = result.ErrorMessage ?? "Code invalide";
             }
         }
-        catch (Exception ex)
-        {
-            mfaSetupError = $"Erreur : {ex.Message}";
-        }
-        finally
-        {
-            isMfaSetupLoading = false;
-        }
+        catch (Exception ex) { mfaSetupError = $"Erreur : {ex.Message}"; }
+        finally { isMfaSetupLoading = false; }
     }
 
     private void CloseMfaSetupModal()
@@ -579,7 +412,43 @@
         mfaQrCode = null;
         mfaSecretKey = null;
     }
-    #region notification
+
+    private void InitiateMfaDisable()
+    {
+        showMfaDisableModal = true;
+        mfaDisableError = null;
+    }
+
+    private async Task HandleMfaDisableVerify(string code)
+    {
+        isMfaDisableLoading = true;
+        mfaDisableError = null;
+        try
+        {
+            var result = await MfaService.DisableMfa(currentUserId, code);
+            if (result.Success)
+            {
+                currentMfaEnabled = false;
+                Snackbar.Add("MFA désactivé avec succès", Severity.Info);
+                CloseMfaDisableModal();
+                await LoadProfile();
+            }
+            else
+            {
+                mfaDisableError = result.ErrorMessage ?? "Code invalide";
+            }
+        }
+        catch (Exception ex) { mfaDisableError = $"Erreur : {ex.Message}"; }
+        finally { isMfaDisableLoading = false; }
+    }
+
+    private void CloseMfaDisableModal()
+    {
+        showMfaDisableModal = false;
+        mfaDisableError = null;
+    }
+
+    #region Notifications
     private async Task LoadNotifStatusAsync()
     {
         try { _notifSupported = await JS.InvokeAsync<bool>("eval", "'Notification' in window && 'serviceWorker' in navigator"); }
@@ -605,7 +474,6 @@
     {
         _notifLoading = true;
         _notifMessage = null;
-
         try
         {
             if (value)
@@ -616,15 +484,15 @@
 
                 if (result.Success)
                 {
-                    _notifSubscribed  = true;
-                    _notifPermission  = "granted";
-                    _notifMessage     = "Notifications activées !";
-                    _notifError       = false;
+                    _notifSubscribed = true;
+                    _notifPermission = "granted";
+                    _notifMessage    = "Notifications activées !";
+                    _notifError      = false;
                 }
                 else
                 {
                     _notifPermission = await JS.InvokeAsync<string>("getNotificationPermission");
-                    _notifMessage    = result.Error ?? "Erreur lors de l'activation.";
+                    _notifMessage    = result.Error ?? "Erreur lors de l'activation";
                     _notifError      = true;
                 }
             }
@@ -636,22 +504,14 @@
                 _notifError      = false;
             }
         }
-        catch (Exception ex)
-        {
-            _notifMessage = ex.Message;
-            _notifError   = true;
-        }
-        finally
-        {
-            _notifLoading = false;
-        }
+        catch (Exception ex) { _notifMessage = ex.Message; _notifError = true; }
+        finally { _notifLoading = false; }
     }
 
     private async Task SendTestNotifAsync()
     {
         _notifLoading = true;
         _notifMessage = null;
-
         try
         {
             var response = await WorldBetApi.PostAsync("notifications/test");
@@ -660,72 +520,13 @@
                 : $"Erreur {(int)response.StatusCode}";
             _notifError = !response.IsSuccessStatusCode;
         }
-        catch (Exception ex)
-        {
-            _notifMessage = ex.Message;
-            _notifError   = true;
-        }
-        finally
-        {
-            _notifLoading = false;
-        }
+        catch (Exception ex) { _notifMessage = ex.Message; _notifError = true; }
+        finally { _notifLoading = false; }
     }
 
     private record NotifStatus(bool IsSubscribed);
     private record SubscribeResult(bool Success, string? Error);
     #endregion
 
-    // ========== MFA DISABLE WORKFLOW ==========
-    
-    private void InitiateMfaDisable()
-    {
-        showMfaDisableModal = true;
-        mfaDisableError = null;
-    }
-
-    private async Task HandleMfaDisableVerify(string code)
-    {
-        isMfaDisableLoading = true;
-        mfaDisableError = null;
-
-        try
-        {
-            var result = await MfaService.DisableMfa(currentUserId, code);
-
-            if (result.Success)
-            {
-                currentMfaEnabled = false;
-                successMessage = "MFA désactivé avec succès";
-                CloseMfaDisableModal();
-                await Task.Delay(1500);
-                successMessage = null;
-                await LoadProfile();
-            }
-            else
-            {
-                mfaDisableError = result.ErrorMessage ?? "Code invalide";
-            }
-        }
-        catch (Exception ex)
-        {
-            mfaDisableError = $"Erreur : {ex.Message}";
-        }
-        finally
-        {
-            isMfaDisableLoading = false;
-        }
-    }
-
-    private void CloseMfaDisableModal()
-    {
-        showMfaDisableModal = false;
-        mfaDisableError = null;
-    }
-
-    // ========== NAVIGATION ==========
-    
-    private void NavigateToChangePassword()
-    {
-        Navigation.NavigateTo("/change-password");
-    }
+    private void NavigateToChangePassword() => Navigation.NavigateTo("/change-password");
 }

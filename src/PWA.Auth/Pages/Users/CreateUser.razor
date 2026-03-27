@@ -5,15 +5,42 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject IUserService UserService
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
-<h2>Créer un utilisateur</h2>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-4">
 
-<UserForm Mode="FormMode.Create"
-          OnSubmit="HandleCreate"
-          IsLoading="isLoading"
-          ErrorMessage="@errorMessage"
-          ShowAdminOptions="true"
-          RequirePassword="true" />
+    <div class="d-flex align-items-center mb-4 gap-3">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="@(() => Navigation.NavigateTo("/admin/users"))">
+            Retour
+        </MudButton>
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="me-2" />
+            Créer un utilisateur
+        </MudText>
+    </div>
+
+    <MudPaper Elevation="2" Class="pa-5">
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <strong>Processus d'inscription :</strong>
+            <ul class="mb-0 mt-2">
+                <li>L'admin recevra une demande d'inscription</li>
+                <li>Une fois validé, vous recevrez un email pour vous prévenir que vous pouvez vous connecter</li>
+            </ul>
+        </MudAlert>
+
+        <UserForm Mode="FormMode.Create"
+                  OnSubmit="HandleCreate"
+                  OnCancel="@(() => Navigation.NavigateTo("/admin/users"))"
+                  IsLoading="@isLoading"
+                  ErrorMessage="@errorMessage"
+                  ShowAdminOptions="true"
+                  RequirePassword="true" />
+    </MudPaper>
+
+</MudContainer>
 
 @code {
     private bool isLoading;
@@ -23,23 +50,23 @@
     {
         isLoading = true;
         errorMessage = null;
-
         try
         {
             var request = new CreateUserRequest
             {
-                Email = model.Email,
-                LastName = model.LastName,
+                Email     = model.Email,
+                LastName  = model.LastName,
                 FirstName = model.FirstName,
-                Password = model.Password!,
-                IsAdmin = model.IsAdmin,
-                Active = model.Active
+                Password  = model.Password!,
+                IsAdmin   = model.IsAdmin,
+                Active    = model.Active
             };
 
             var result = await UserService.CreateUser(request);
 
             if (result.Success)
             {
+                Snackbar.Add("Utilisateur créé avec succès", Severity.Success);
                 Navigation.NavigateTo("/admin/users");
             }
             else

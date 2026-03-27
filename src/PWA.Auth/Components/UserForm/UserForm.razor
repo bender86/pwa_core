@@ -4,129 +4,132 @@
 @using dto.user.Models
 @using PWA.Auth.Models
 
-<div class="user-form">
-    @if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle"></i> @ErrorMessage
-            <button type="button" class="btn-close" @onclick="() => ErrorMessage = null"></button>
-        </div>
-    }
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <MudAlert Severity="Severity.Error" ShowCloseIcon="true"
+              CloseIconClicked="() => ErrorMessage = null"
+              Class="mb-4">
+        @ErrorMessage
+    </MudAlert>
+}
 
-    <EditForm Model="@model" OnValidSubmit="HandleSubmit">
-        <DataAnnotationsValidator />
-        
-        <div class="row g-3">
-            <!-- Prénom -->
-            <div class="col-md-6">
-                <label class="form-label">First Name <span class="text-danger">*</span></label>
-                <InputText @bind-Value="model.FirstName" 
-                           class="form-control" 
-                           placeholder="First name"
-                           disabled="@IsLoading" />
-                <ValidationMessage For="@(() => model.FirstName)" class="text-danger small" />
-            </div>
+<MudForm @ref="form" @bind-IsValid="isValid">
+    <MudGrid Spacing="3">
 
-            <!-- Nom -->
-            <div class="col-md-6">
-                <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                <InputText @bind-Value="model.LastName" 
-                           class="form-control" 
-                           placeholder="Last name"
-                           disabled="@IsLoading" />
-                <ValidationMessage For="@(() => model.LastName)" class="text-danger small" />
-            </div>
+        <!-- Prénom -->
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string"
+                          @bind-Value="model.FirstName"
+                          Label="Prénom"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Le prénom est requis"
+                          Disabled="@IsLoading"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Person" />
+        </MudItem>
 
-            <!-- Email -->
-            <div class="col-12">
-                <label class="form-label">Email <span class="text-danger">*</span></label>
-                <InputText @bind-Value="model.Email" 
-                           type="email"
-                           class="form-control" 
-                           placeholder="email@example.com"
-                           disabled="@(IsLoading || Mode == FormMode.Edit)" />
-                <ValidationMessage For="@(() => model.Email)" class="text-danger small" />
-                @if (Mode == FormMode.Create && !RequirePassword)
-                {
-                    <div class="form-text">
-                        <i class="bi bi-info-circle"></i> An invitation email will be sent to this address
-                    </div>
-                }
-            </div>
+        <!-- Nom -->
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string"
+                          @bind-Value="model.LastName"
+                          Label="Nom"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Le nom est requis"
+                          Disabled="@IsLoading"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Person" />
+        </MudItem>
 
-            <!-- Mot de passe (seulement si requis) -->
-            @if (RequirePassword && Mode == FormMode.Create)
+        <!-- Email -->
+        <MudItem xs="12">
+            <MudTextField T="string"
+                          @bind-Value="model.Email"
+                          Label="Email"
+                          InputType="InputType.Email"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="L'email est requis"
+                          Disabled="@(IsLoading || Mode == FormMode.Edit)"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email"
+                          HelperText="@(Mode == FormMode.Create && !RequirePassword ? "Un email d'invitation sera envoyé à cette adresse" : null)" />
+        </MudItem>
+
+        <!-- Mot de passe (seulement si requis en création) -->
+        @if (RequirePassword && Mode == FormMode.Create)
+        {
+            <MudItem xs="12">
+                <MudTextField T="string"
+                              @bind-Value="model.Password"
+                              Label="Mot de passe"
+                              InputType="@passwordInputType"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              RequiredError="Le mot de passe est requis"
+                              Disabled="@IsLoading"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@passwordIcon"
+                              OnAdornmentClick="TogglePasswordVisibility" />
+            </MudItem>
+        }
+
+        <!-- Options Admin -->
+        @if (ShowAdminOptions)
+        {
+            <MudItem xs="12">
+                <MudPaper Elevation="0" Class="pa-4"
+                          Style="border: 1px solid var(--mud-palette-divider); border-radius: 8px;">
+                    <MudText Typo="Typo.body1" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Class="me-2" />
+                        Options administrateur
+                    </MudText>
+                    <MudSwitch @bind-Value="model.IsAdmin"
+                               Color="Color.Primary"
+                               Label="Administrateur"
+                               Disabled="@IsLoading"
+                               Class="mb-2" />
+                    <MudSwitch @bind-Value="model.Active"
+                               Color="Color.Success"
+                               Label="Compte actif"
+                               Disabled="@IsLoading" />
+                </MudPaper>
+            </MudItem>
+        }
+
+    </MudGrid>
+
+    <!-- Boutons d'action -->
+    <div class="d-flex gap-2 mt-4">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@(Mode == FormMode.Create ? Icons.Material.Filled.PersonAdd : Icons.Material.Filled.Save)"
+                   Disabled="@(!isValid || IsLoading)"
+                   OnClick="HandleSubmit">
+            @if (IsLoading)
             {
-                <div class="col-12">
-                    <label class="form-label">Password <span class="text-danger">*</span></label>
-                    <InputText type="password" 
-                               @bind-Value="model.Password" 
-                               class="form-control" 
-                               placeholder="••••••••"
-                               disabled="@IsLoading" />
-                    <ValidationMessage For="@(() => model.Password)" class="text-danger small" />
-                </div>
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                <span>Enregistrement...</span>
             }
-
-            <!-- Options Admin -->
-            @if (ShowAdminOptions)
+            else
             {
-                <div class="col-12">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title mb-3">
-                                <i class="bi bi-shield-lock"></i> Admin Options
-                            </h6>
-                            
-                            <div class="form-check mb-2">
-                                <InputCheckbox @bind-Value="model.IsAdmin" 
-                                               class="form-check-input" 
-                                               id="isAdmin"
-                                               disabled="@IsLoading" />
-                                <label class="form-check-label" for="isAdmin">
-                                    Administrator
-                                </label>
-                            </div>
-
-                            <div class="form-check">
-                                <InputCheckbox @bind-Value="model.Active" 
-                                               class="form-check-input" 
-                                               id="isActive"
-                                               disabled="@IsLoading" />
-                                <label class="form-check-label" for="isActive">
-                                    Active
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                @(Mode == FormMode.Create ? "Créer l'utilisateur" : "Mettre à jour")
             }
-        </div>
+        </MudButton>
 
-        <!-- Boutons d'action -->
-        <div class="d-flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary" disabled="@IsLoading">
-                @if (IsLoading)
-                {
-                    <span class="spinner-border spinner-border-sm me-2"></span>
-                    <span>Saving...</span>
-                }
-                else
-                {
-                    <i class="bi bi-@(Mode == FormMode.Create ? "plus-lg" : "check-lg")"></i>
-                    <span>@(Mode == FormMode.Create ? "Create User" : "Update")</span>
-                }
-            </button>
-
-            @if (ShowCancelButton)
-            {
-                <button type="button" class="btn btn-outline-secondary" @onclick="OnCancel" disabled="@IsLoading">
-                    <i class="bi bi-x-lg"></i> Cancel
-                </button>
-            }
-        </div>
-    </EditForm>
-</div>
+        @if (ShowCancelButton)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Filled.Close"
+                       Disabled="@IsLoading"
+                       OnClick="OnCancel">
+                Annuler
+            </MudButton>
+        }
+    </div>
+</MudForm>
 
 @code {
     [Parameter] public FormMode Mode { get; set; }
@@ -137,37 +140,44 @@
     [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public bool ShowAdminOptions { get; set; } = false;
     [Parameter] public bool ShowCancelButton { get; set; } = true;
-    [Parameter] public bool RequirePassword { get; set; } = false; // Nouveau paramètre
+    [Parameter] public bool RequirePassword { get; set; } = false;
 
+    private MudForm? form;
+    private bool isValid;
+    private bool showPassword = false;
     private UserFormModel model = new();
+
+    private InputType passwordInputType => showPassword ? InputType.Text : InputType.Password;
+    private string passwordIcon => showPassword
+        ? Icons.Material.Filled.VisibilityOff
+        : Icons.Material.Filled.Visibility;
+
+    private void TogglePasswordVisibility() => showPassword = !showPassword;
 
     protected override void OnParametersSet()
     {
-        if (InitialData != null)
-        {
-            model = new UserFormModel
+        model = InitialData != null
+            ? new UserFormModel
             {
-                Id = InitialData.Id,
-                FirstName = InitialData.FirstName,
-                LastName = InitialData.LastName,
-                Email = InitialData.Email,
-                Password = InitialData.Password,
-                IsAdmin = InitialData.IsAdmin,
-                Active = InitialData.Active,
+                Id         = InitialData.Id,
+                FirstName  = InitialData.FirstName,
+                LastName   = InitialData.LastName,
+                Email      = InitialData.Email,
+                Password   = InitialData.Password,
+                IsAdmin    = InitialData.IsAdmin,
+                Active     = InitialData.Active,
                 MfaEnabled = InitialData.MfaEnabled
-            };
-        }
-        else
-        {
-            model = new UserFormModel
-            {
-                Active = true // Par défaut actif
-            };
-        }
+            }
+            : new UserFormModel { Active = true };
     }
 
     private async Task HandleSubmit()
     {
-        await OnSubmit.InvokeAsync(model);
+        if (form != null)
+        {
+            await form.Validate();
+            if (isValid)
+                await OnSubmit.InvokeAsync(model);
+        }
     }
 }

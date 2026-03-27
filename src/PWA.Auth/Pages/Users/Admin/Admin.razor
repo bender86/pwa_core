@@ -1,49 +1,106 @@
 @page "/admin"
 @attribute [Authorize(Roles = "Admin")]
+@inject NavigationManager Navigation
 
 <PageTitle>Administration - MaesAuth</PageTitle>
 
-<div class="container mt-5">
-    <h1 class="mb-4">Administration</h1>
-    
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm" style="cursor: pointer;" @onclick="NavigateToManageUsers">
-                <div class="card-body text-center">
-                    <i class="bi bi-people" style="font-size: 3rem; color: var(--bs-primary);"></i>
-                    <h5 class="card-title mt-3">Manage Users</h5>
-                    <p class="card-text text-muted">View and manage user accounts</p>
-                </div>
-            </div>
-        </div>
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
 
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm" style="opacity: 0.6;">
-                <div class="card-body text-center">
-                    <i class="bi bi-grid-3x3" style="font-size: 3rem; color: var(--bs-secondary);"></i>
-                    <h5 class="card-title mt-3">Applications</h5>
-                    <p class="card-text text-muted">Coming soon...</p>
-                </div>
-            </div>
-        </div>
+    <MudText Typo="Typo.h4" Class="mb-1">
+        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Class="me-2" />
+        Administration
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Gestion de la plateforme MaesAuth
+    </MudText>
 
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm" style="opacity: 0.6;">
-                <div class="card-body text-center">
-                    <i class="bi bi-gear" style="font-size: 3rem; color: var(--bs-secondary);"></i>
-                    <h5 class="card-title mt-3">System Settings</h5>
-                    <p class="card-text text-muted">Coming soon...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    <MudGrid Spacing="4">
 
-@code {
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
+        <!-- Gestion des utilisateurs -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="2" Class="admin-tile pa-5" @onclick="@(() => Navigation.NavigateTo("/admin/users"))">
+                <MudIcon Icon="@Icons.Material.Filled.People"
+                         Color="Color.Primary"
+                         Style="font-size: 3rem;" />
+                <MudText Typo="Typo.h6" Class="mt-3 mb-1" Style="font-weight: 600;">
+                    Utilisateurs
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Gérer les comptes utilisateurs
+                </MudText>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
+                         Color="Color.Primary"
+                         Class="tile-arrow mt-2" />
+            </MudPaper>
+        </MudItem>
 
-    private void NavigateToManageUsers()
-    {
-        Navigation.NavigateTo("/admin/users");
+        <!-- Applications (coming soon) -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="admin-tile admin-tile-disabled pa-5">
+                <MudIcon Icon="@Icons.Material.Filled.Apps"
+                         Color="Color.Default"
+                         Style="font-size: 3rem; opacity: 0.4;" />
+                <MudText Typo="Typo.h6" Class="mt-3 mb-1" Style="font-weight: 600; opacity: 0.5;">
+                    Applications
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="opacity: 0.5;">
+                    Bientôt disponible
+                </MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-2">
+                    Coming soon
+                </MudChip>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Paramètres (coming soon) -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="admin-tile admin-tile-disabled pa-5">
+                <MudIcon Icon="@Icons.Material.Filled.Settings"
+                         Color="Color.Default"
+                         Style="font-size: 3rem; opacity: 0.4;" />
+                <MudText Typo="Typo.h6" Class="mt-3 mb-1" Style="font-weight: 600; opacity: 0.5;">
+                    Paramètres système
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="opacity: 0.5;">
+                    Bientôt disponible
+                </MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="mt-2">
+                    Coming soon
+                </MudChip>
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+
+</MudContainer>
+
+<style>
+    .admin-tile {
+        cursor: pointer;
+        border-radius: 12px !important;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        height: 100%;
     }
-}
+
+    .admin-tile:hover:not(.admin-tile-disabled) {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .admin-tile-disabled {
+        cursor: default;
+    }
+
+    .tile-arrow {
+        opacity: 0;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .admin-tile:hover .tile-arrow {
+        opacity: 1;
+        transform: translateX(4px);
+    }
+</style>

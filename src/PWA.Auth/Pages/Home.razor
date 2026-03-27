@@ -5,61 +5,77 @@
 @using dto.auth.Models
 @using dto.common.Models
 
-<div class="dashboard-container">
+<PageTitle>Accueil - MaesAuth</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+
     @if (!isAuthenticated)
     {
-        <div class="loading">
-            <div class="spinner-border text-primary"></div>
-            <p>Vérification de l'authentification...</p>
+        <div class="text-center py-5">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Class="mt-3" Color="Color.Secondary">Vérification de l'authentification...</MudText>
         </div>
     }
     else
     {
-        <div class="dashboard-header">
-            <h2>Welcome back@(!string.IsNullOrEmpty(userName) ? $", {userName}" : "")!</h2>
-            <p>Select an application to get started</p>
+        <div class="text-center mb-6">
+            <MudText Typo="Typo.h4" Style="font-weight: 600;">
+                Bienvenue@(!string.IsNullOrEmpty(userName) ? $", {userName}" : "") !
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-1">
+                Sélectionnez une application pour continuer
+            </MudText>
         </div>
 
         @if (isLoading)
         {
-            <div class="loading">
-                <div class="spinner-border text-primary"></div>
-                <p>Loading your applications...</p>
+            <div class="text-center py-5">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="mt-3" Color="Color.Secondary">Chargement des applications...</MudText>
             </div>
         }
         else if (availableApps.Count == 0)
         {
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i>
-                You don't have access to any applications yet. Contact your administrator.
-            </div>
+            <MudAlert Severity="Severity.Info" Class="mx-auto" Style="max-width: 600px;">
+                Vous n'avez accès à aucune application pour le moment. Contactez votre administrateur.
+            </MudAlert>
         }
         else
         {
-            <div class="app-tiles">
+            <MudGrid Spacing="4" Justify="Justify.Center">
                 @foreach (var app in availableApps)
                 {
-                    <div class="app-tile" @onclick="() => NavigateToApp(app)">
-                        <div class="app-icon">
-                            @if (!string.IsNullOrEmpty(app.IconUrl))
-                            {
-                                <img src="@app.IconUrl" alt="@app.DisplayName" />
-                            }
-                            else
-                            {
-                                <i class="bi bi-app"></i>
-                            }
-                        </div>
-                        <h3>@app.DisplayName</h3>
-                        <div class="app-arrow">
-                            <i class="bi bi-arrow-right"></i>
-                        </div>
-                    </div>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Elevation="2"
+                                  Class="app-tile pa-6"
+                                  @onclick="() => NavigateToApp(app)">
+                            <div class="app-icon mb-4">
+                                @if (!string.IsNullOrEmpty(app.IconUrl))
+                                {
+                                    <MudImage Src="@app.IconUrl"
+                                              Alt="@app.DisplayName"
+                                              Width="48" Height="48"
+                                              ObjectFit="ObjectFit.Contain" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Apps"
+                                             Color="Color.Primary"
+                                             Style="font-size: 3rem;" />
+                                }
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">@app.DisplayName</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
+                                     Color="Color.Primary"
+                                     Class="app-arrow mt-2" />
+                        </MudPaper>
+                    </MudItem>
                 }
-            </div>
+            </MudGrid>
         }
     }
-</div>
+
+</MudContainer>
 
 @code {
     private bool isAuthenticated = false;
@@ -69,21 +85,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Vérifier l'authentification AVANT tout
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
         if (user?.Identity?.IsAuthenticated != true)
         {
-            Console.WriteLine("❌ Not authenticated, redirecting to login");
             Navigation.NavigateTo("/login", replace: true);
             return;
         }
 
-        Console.WriteLine("✅ User is authenticated");
         isAuthenticated = true;
-
-        // Charger les données
         await LoadUserInfo();
         await LoadApplications();
     }
@@ -94,50 +105,30 @@
         {
             var user = await AuthService.GetCurrentUserAsync();
             if (user != null)
-            {
                 userName = string.IsNullOrEmpty(user.FullName) ? user.Email : user.FullName;
-                Console.WriteLine($"👤 User: {userName}");
-                Console.WriteLine($"🔐 Roles: {string.Join(", ", user.Roles)}");
-                Console.WriteLine($"📱 Apps: {string.Join(", ", user.Applications)}");
-            }
-            else
-            {
-                Console.WriteLine("❌ User is NULL!");
-            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading user info: {ex.Message}");
-            Console.WriteLine($"Stack: {ex.StackTrace}");
+            Console.WriteLine($"Error loading user info: {ex.Message}");
         }
     }
 
     private async Task LoadApplications()
     {
         isLoading = true;
-
         try
         {
             availableApps = await AuthService.GetUserApplicationDetailsAsync();
-            
-            Console.WriteLine($"📱 Loaded {availableApps.Count} applications");
-            
-            foreach (var app in availableApps)
-            {
-                Console.WriteLine($"  ✅ {app.DisplayName} - {app.AppUrl}");
-            }
-            // Auto-redirect if the user only has access to one app
+
             if (availableApps.Count == 1)
             {
-                Console.WriteLine($"🚀 Single app detected, redirecting to {availableApps[0].DisplayName}");
                 NavigateToApp(availableApps[0]);
                 return;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading applications: {ex.Message}");
-            Console.WriteLine($"Stack: {ex.StackTrace}");
+            Console.WriteLine($"Error loading applications: {ex.Message}");
         }
         finally
         {
@@ -147,166 +138,47 @@
 
     private void NavigateToApp(ApplicationDetailsResponse app)
     {
-        Console.WriteLine($"🚀 Navigating to {app.DisplayName} ({app.AppUrl})");
-        
-        if (!string.IsNullOrEmpty(app.AppUrl))
-        {
-            if (app.AppUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                Navigation.NavigateTo(app.AppUrl, forceLoad: true);
-            }
-            else
-            {
-                Navigation.NavigateTo(app.AppUrl);
-            }
-        }
+        if (string.IsNullOrEmpty(app.AppUrl)) return;
+
+        if (app.AppUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            Navigation.NavigateTo(app.AppUrl, forceLoad: true);
+        else
+            Navigation.NavigateTo(app.AppUrl);
     }
 }
 
-
 <style>
-    .dashboard-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem;
-    }
-
-    .dashboard-header {
-        margin-bottom: 3rem;
-        text-align: center;
-    }
-
-    .dashboard-header h2 {
-        font-size: 2rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #212529;
-    }
-
-    .dashboard-header p {
-        color: #6c757d;
-        font-size: 1.1rem;
-    }
-
-    .loading {
-        text-align: center;
-        padding: 4rem 0;
-    }
-
-    .loading .spinner-border {
-        width: 3rem;
-        height: 3rem;
-        margin-bottom: 1rem;
-    }
-
-    .loading p {
-        color: #6c757d;
-        font-size: 1rem;
-    }
-
-    .alert {
-        max-width: 600px;
-        margin: 2rem auto;
-        padding: 1.5rem;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .alert i {
-        font-size: 1.5rem;
-    }
-
-    .app-tiles {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 2rem;
-    }
-
     .app-tile {
-        background: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 2rem;
         cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
+        border-radius: 12px !important;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .app-tile:hover {
         transform: translateY(-4px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        border-color: #007bff;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12) !important;
     }
 
     .app-icon {
         width: 64px;
         height: 64px;
-        margin-bottom: 1rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #f8f9fa;
+        background: var(--mud-palette-background-grey);
         border-radius: 12px;
     }
 
-    .app-icon img {
-        max-width: 48px;
-        max-height: 48px;
-    }
-
-    .app-icon i {
-        font-size: 2rem;
-        color: #007bff;
-    }
-
-    .app-tile h3 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #212529;
-    }
-
-    .app-tile p {
-        color: #6c757d;
-        margin-bottom: 0;
-        font-size: 0.95rem;
-        line-height: 1.5;
-    }
-
     .app-arrow {
-        position: absolute;
-        bottom: 1rem;
-        right: 1rem;
         opacity: 0;
-        transition: all 0.3s ease;
+        transition: opacity 0.25s ease, transform 0.25s ease;
     }
 
     .app-tile:hover .app-arrow {
         opacity: 1;
         transform: translateX(4px);
-    }
-
-    .app-arrow i {
-        font-size: 1.5rem;
-        color: #007bff;
-    }
-
-    /* Responsive */
-    @@media (max-width: 768px) {
-        .dashboard-container {
-            padding: 1rem;
-        }
-
-        .dashboard-header h2 {
-            font-size: 1.5rem;
-        }
-
-        .app-tiles {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
     }
 </style>

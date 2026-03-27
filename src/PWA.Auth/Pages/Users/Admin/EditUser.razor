@@ -7,130 +7,116 @@
 @using PWA.Auth.Models
 @inject IUserService UserService
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 @inject ILogger<EditUser> Logger
 
-<PageTitle>Edit User</PageTitle>
+<PageTitle>Modifier l'utilisateur - MaesAuth</PageTitle>
 
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2>
-                        <i class="bi bi-person-gear"></i> Edit User
-                    </h2>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item">
-                                <a href="/admin">Admin</a>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <a href="/admin/users">Users</a>
-                            </li>
-                            <li class="breadcrumb-item active">Edit</li>
-                        </ol>
-                    </nav>
-                </div>
-                <button class="btn btn-outline-secondary" @onclick="NavigateBack">
-                    <i class="bi bi-arrow-left"></i> Back
-                </button>
-            </div>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <MudText Typo="Typo.h4" Class="mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="me-2" />
+                Modifier l'utilisateur
+            </MudText>
+            <MudBreadcrumbs Items="@breadcrumbs" />
         </div>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="NavigateBack">
+            Retour
+        </MudButton>
     </div>
 
     @if (isLoading)
     {
         <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2 text-muted">Loading user information...</p>
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Class="mt-3" Color="Color.Secondary">Chargement de l'utilisateur...</MudText>
         </div>
     }
     else if (userData == null)
     {
-        <div class="alert alert-danger">
-            <i class="bi bi-exclamation-triangle"></i> User not found
-        </div>
+        <MudAlert Severity="Severity.Error">
+            <MudIcon Icon="@Icons.Material.Filled.PersonOff" Class="me-2" />
+            Utilisateur introuvable.
+        </MudAlert>
     }
     else
     {
-        <div class="row g-4">
-            <!-- User Information -->
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="bi bi-person-vcard"></i> User Information
-                        </h5>
+        <MudGrid Spacing="4">
+
+            <!-- Informations utilisateur -->
+            <MudItem xs="12" lg="6">
+                <MudPaper Elevation="2" Style="overflow: hidden;">
+                    <div style="background: var(--mud-palette-primary); padding: 0.75rem 1rem;">
+                        <MudText Typo="Typo.body1" Style="color: white; font-weight: 500;">
+                            <MudIcon Icon="@Icons.Material.Filled.Badge" Class="me-2" Size="Size.Small" />
+                            Informations
+                        </MudText>
                     </div>
-                    <div class="card-body">
+                    <div class="pa-4">
                         <UserForm Mode="FormMode.Edit"
                                   InitialData="userData"
                                   OnSubmit="HandleUpdateUser"
-                                  IsLoading="isSaving"
+                                  IsLoading="@isSaving"
                                   ErrorMessage="@errorMessage"
                                   ShowAdminOptions="true"
                                   ShowCancelButton="false" />
                     </div>
-                </div>
-            </div>
+                </MudPaper>
+            </MudItem>
 
             <!-- Applications -->
-            <div class="col-lg-6">
-                <UserApplications UserId="@UserId" 
+            <MudItem xs="12" lg="6">
+                <UserApplications UserId="@UserId"
                                   OnApplicationsChanged="HandleApplicationsChanged" />
-            </div>
-        </div>
+            </MudItem>
 
-        <!-- User Metadata -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="bi bi-info-circle"></i> User Metadata
-                        </h6>
+            <!-- Métadonnées -->
+            <MudItem xs="12">
+                <MudPaper Elevation="2" Style="overflow: hidden;">
+                    <div style="background: var(--mud-palette-background-grey); padding: 0.75rem 1rem; border-bottom: 1px solid var(--mud-palette-divider);">
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Class="me-2" Size="Size.Small" />
+                            Métadonnées
+                        </MudText>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="text-muted small">User ID</label>
-                                <div><strong>@userDetail?.Id</strong></div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="text-muted small">Username</label>
-                                <div><strong>@userDetail?.Email</strong></div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="text-muted small">Created Date</label>
-                                <div>@userDetail?.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="text-muted small">MFA Status</label>
-                                <div>
-                                    @if (userDetail?.MfaEnabled == true)
-                                    {
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-shield-check"></i> Enabled
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-shield-x"></i> Disabled
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
+                    <div class="pa-4">
+                        <MudGrid Spacing="3">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">ID</MudText>
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">@userDetail?.Id</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">@userDetail?.Email</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Créé le</MudText>
+                                <MudText Typo="Typo.body1">@userDetail?.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">MFA</MudText>
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@(userDetail?.MfaEnabled == true ? Color.Success : Color.Default)"
+                                         Icon="@(userDetail?.MfaEnabled == true ? Icons.Material.Filled.Shield : Icons.Material.Filled.ShieldMoon)">
+                                    @(userDetail?.MfaEnabled == true ? "Activé" : "Désactivé")
+                                </MudChip>
+                            </MudItem>
+                        </MudGrid>
                     </div>
-                </div>
-            </div>
-        </div>
+                </MudPaper>
+            </MudItem>
+
+        </MudGrid>
     }
-</div>
+
+</MudContainer>
 
 @code {
     [Parameter] public int UserId { get; set; }
@@ -141,6 +127,13 @@
     private bool isSaving = false;
     private string? errorMessage;
 
+    private List<BreadcrumbItem> breadcrumbs = new()
+    {
+        new BreadcrumbItem("Admin",  href: "/admin"),
+        new BreadcrumbItem("Utilisateurs", href: "/admin/users"),
+        new BreadcrumbItem("Modifier", href: null, disabled: true)
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadUser();
@@ -150,35 +143,33 @@
     {
         isLoading = true;
         errorMessage = null;
-
         try
         {
             var result = await UserService.GetUserById(UserId);
-
             if (result.Success && result.Data != null)
             {
                 userDetail = result.Data;
                 userData = new UserFormModel
                 {
-                    Id = result.Data.Id,
-                    FirstName = result.Data.FirstName,
-                    LastName = result.Data.LastName,
-                    Email = result.Data.Email,
-                    IsAdmin = result.Data.IsAdmin??false,
-                    Active = result.Data.Active??false,
-                    MfaEnabled = result.Data.MfaEnabled??false,
+                    Id          = result.Data.Id,
+                    FirstName   = result.Data.FirstName,
+                    LastName    = result.Data.LastName,
+                    Email       = result.Data.Email,
+                    IsAdmin     = result.Data.IsAdmin ?? false,
+                    Active      = result.Data.Active ?? false,
+                    MfaEnabled  = result.Data.MfaEnabled ?? false,
                     CreatedDate = result.Data.CreatedAt
                 };
             }
             else
             {
-                errorMessage = result.ErrorMessage ?? "Failed to load user";
+                errorMessage = result.ErrorMessage ?? "Impossible de charger l'utilisateur";
                 Logger.LogError("Failed to load user {UserId}: {Error}", UserId, result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "Error loading user";
+            errorMessage = "Erreur lors du chargement";
             Logger.LogError(ex, "Error loading user {UserId}", UserId);
         }
         finally
@@ -191,31 +182,31 @@
     {
         isSaving = true;
         errorMessage = null;
-
         try
         {
             var result = await UserService.UpdateUser(new UpdateUserRequest
             {
-                Id = model.Id,
+                Id        = model.Id,
                 FirstName = model.FirstName,
-                LastName = model.LastName,
-                IsAdmin = model.IsAdmin,
-                Active = model.Active
+                LastName  = model.LastName,
+                IsAdmin   = model.IsAdmin,
+                Active    = model.Active
             });
 
             if (result.Success)
             {
+                Snackbar.Add("Utilisateur mis à jour avec succès", Severity.Success);
                 Navigation.NavigateTo("/admin/users");
             }
             else
             {
-                errorMessage = result.ErrorMessage ?? "Failed to update user";
+                errorMessage = result.ErrorMessage ?? "Impossible de mettre à jour l'utilisateur";
                 Logger.LogError("Failed to update user {UserId}: {Error}", UserId, result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "Error updating user";
+            errorMessage = "Erreur lors de la mise à jour";
             Logger.LogError(ex, "Error updating user {UserId}", UserId);
         }
         finally
@@ -224,14 +215,7 @@
         }
     }
 
-    private async Task HandleApplicationsChanged()
-    {
-        // Refresh user data if needed
-        await LoadUser();
-    }
+    private async Task HandleApplicationsChanged() => await LoadUser();
 
-    private void NavigateBack()
-    {
-        Navigation.NavigateTo("/admin/users");
-    }
+    private void NavigateBack() => Navigation.NavigateTo("/admin/users");
 }

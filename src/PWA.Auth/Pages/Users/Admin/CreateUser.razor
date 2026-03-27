@@ -4,94 +4,85 @@
 @using dto.user.Models
 @using dto.common.Enums
 @using PWA.Auth.Models
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
-<PageTitle>Create User - MaesAuth</PageTitle>
+<PageTitle>Créer un utilisateur - MaesAuth</PageTitle>
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="d-flex align-items-center mb-4">
-                <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
-                    <i class="bi bi-arrow-left"></i> Back
-                </button>
-                <h1 class="mb-0">Create New User</h1>
-            </div>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-4">
 
-            @if (!string.IsNullOrEmpty(successMessage))
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle"></i> @successMessage
-                    <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-                </div>
-            }
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <div class="alert alert-info mb-4">
-                        <i class="bi bi-info-circle"></i>
-                        <strong>Invitation Process:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>The user will receive an email invitation</li>
-                            <li>They must click the link to set their password</li>
-                            <li>Their account will be activated once they complete setup</li>
-                        </ul>
-                    </div>
-
-                    <UserForm Mode="FormMode.Create"
-                              OnSubmit="HandleCreateUser"
-                              OnCancel="GoBack"
-                              IsLoading="isLoading"
-                              ErrorMessage="@errorMessage"
-                              ShowAdminOptions="true"
-                              RequirePassword="false" />
-                </div>
-            </div>
-        </div>
+    <!-- Header -->
+    <div class="d-flex align-items-center mb-4 gap-3">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="GoBack">
+            Retour
+        </MudButton>
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="me-2" />
+            Créer un utilisateur
+        </MudText>
     </div>
-</div>
+
+    <MudPaper Elevation="2" Class="pa-5">
+
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <strong>Processus d'invitation :</strong>
+            <ul class="mb-0 mt-2">
+                <li>L'utilisateur recevra un email d'invitation</li>
+                <li>Il devra cliquer sur le lien pour définir son mot de passe</li>
+                <li>Son compte sera activé une fois l'inscription complétée</li>
+            </ul>
+        </MudAlert>
+
+        <UserForm Mode="FormMode.Create"
+                  OnSubmit="HandleCreateUser"
+                  OnCancel="GoBack"
+                  IsLoading="@isLoading"
+                  ErrorMessage="@errorMessage"
+                  ShowAdminOptions="true"
+                  RequirePassword="false" />
+
+    </MudPaper>
+
+</MudContainer>
 
 @code {
-    [Inject] private IUserService UserService { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-
     private bool isLoading = false;
     private string? errorMessage;
-    private string? successMessage;
 
     private async Task HandleCreateUser(UserFormModel formData)
     {
         isLoading = true;
         errorMessage = null;
-        successMessage = null;
-
         try
         {
             var request = new CreateUserInvitationRequest
             {
-                Email = formData.Email,
+                Email     = formData.Email,
                 FirstName = formData.FirstName,
-                LastName = formData.LastName,
-                IsAdmin = formData.IsAdmin
+                LastName  = formData.LastName,
+                IsAdmin   = formData.IsAdmin
             };
 
             var response = await UserService.CreateUserInvitation(request);
 
             if (response.Success)
             {
-                successMessage = $"Invitation sent to {formData.Email}. The user will receive an email to complete their registration.";
-                
-                // Rediriger vers la liste après 3 secondes
-                await Task.Delay(3000);
+                Snackbar.Add($"Invitation envoyée à {formData.Email}", Severity.Success);
+                await Task.Delay(1500);
                 Navigation.NavigateTo("/admin/users");
             }
             else
             {
-                errorMessage = response.ErrorMessage ?? "Failed to create user invitation";
+                errorMessage = response.ErrorMessage ?? "Impossible d'envoyer l'invitation";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
+            errorMessage = $"Erreur : {ex.Message}";
         }
         finally
         {
@@ -99,8 +90,5 @@
         }
     }
 
-    private void GoBack()
-    {
-        Navigation.NavigateTo("/admin/users");
-    }
+    private void GoBack() => Navigation.NavigateTo("/admin/users");
 }

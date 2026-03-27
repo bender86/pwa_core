@@ -1,5 +1,6 @@
 @page "/login"
 @page "/user/login"
+@attribute [AllowAnonymous]
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
@@ -7,43 +8,164 @@
 <PageTitle>Connexion - MaesAuth</PageTitle>
 
 <div class="login-page">
-    <div class="login-card">
-        <div class="logo-section">
-            <h2>🔐 MaesAuth</h2>
-            <p class="subtitle">Système d'authentification centralisé</p>
+    <MudPaper Elevation="3" Class="login-card pa-6">
+
+        <div class="text-center mb-5">
+            <MudText Typo="Typo.h5" Style="font-weight: 600;">🔐 MaesAuth</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Système d'authentification centralisé</MudText>
         </div>
 
         @if (!requiresMfa)
         {
-            <!-- Étape 1 : Login classique -->
-            <LoginForm 
-                IsLoading="@isLoading"
-                ErrorMessage="@errorMessage"
-                OnLoginSubmit="HandleLogin" />
-                
-            <!-- Alternative avec un bouton -->
-            <div class="register-section">
-                <p>Pas encore de compte ?</p>
-                <button class="btn btn-outline-primary btn-block" @onclick="NavigateToRegister">
-                    ➕ Créer un compte
-                </button>
+            <LoginForm IsLoading="@isLoading"
+                       ErrorMessage="@errorMessage"
+                       OnLoginSubmit="HandleLogin" />
+
+            <MudDivider Class="my-4" />
+
+            <div class="text-center">
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                    Pas encore de compte ?
+                </MudText>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.PersonAdd"
+                           OnClick="NavigateToRegister">
+                    Créer un compte
+                </MudButton>
             </div>
         }
         else
         {
-            <!-- Étape 2 : Vérification MFA -->
-            <MfaVerification 
-                IsLoading="@isLoading"
-                ErrorMessage="@errorMessage"
-                ShowQrCode="@showQrCode"
-                QrCodeBase64="@qrCodeBase64"
-                SecretKey="@secretKey"
-                PromptMessage="Entrez le code de votre application d'authentification"
-                OnMfaCodeSubmit="HandleMfaVerify"
-                OnCancel="HandleCancelMfa" />
+            <MfaVerification IsLoading="@isLoading"
+                             ErrorMessage="@errorMessage"
+                             ShowQrCode="@showQrCode"
+                             QrCodeBase64="@qrCodeBase64"
+                             SecretKey="@secretKey"
+                             PromptMessage="Entrez le code de votre application d'authentification"
+                             OnMfaCodeSubmit="HandleMfaVerify"
+                             OnCancel="HandleCancelMfa" />
         }
-    </div>
+
+    </MudPaper>
 </div>
+
+@code {
+    private bool isLoading = false;
+    private string? errorMessage;
+
+    // MFA state
+    private bool requiresMfa = false;
+    private string? mfaSessionId;
+    private bool showQrCode = false;
+    private string? qrCodeBase64;
+    private string? secretKey;
+
+    private async Task HandleLogin(AuthenticateRequest request)
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var result = await AuthService.LoginAsync(request.Email, request.Password);
+
+            if (result.Success && result.Data != null)
+            {
+                if (result.Data.RequiresMfa)
+                {
+                    requiresMfa  = true;
+                    mfaSessionId = result.Data.MfaSessionId;
+
+                    if (!string.IsNullOrEmpty(result.Data.QrCodeBase64))
+                    {
+                        showQrCode   = true;
+                        qrCodeBase64 = result.Data.QrCodeBase64;
+                        secretKey    = result.Data.SecretKey;
+                    }
+                }
+                else
+                {
+                    await CompleteAuthentication();
+                }
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Identifiants invalides";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de connexion : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleMfaVerify(string code)
+    {
+        if (string.IsNullOrEmpty(mfaSessionId))
+        {
+            errorMessage = "Session MFA invalide";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var result = await AuthService.VerifyMfaAsync(mfaSessionId, code);
+
+            if (result.Success && result.Data != null)
+            {
+                if (!string.IsNullOrEmpty(result.Data.Token))
+                    await CompleteAuthentication();
+                else
+                    errorMessage = "Erreur lors de la génération du token";
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Code MFA invalide";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de vérification : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void HandleCancelMfa()
+    {
+        requiresMfa  = false;
+        mfaSessionId = null;
+        showQrCode   = false;
+        qrCodeBase64 = null;
+        secretKey    = null;
+        errorMessage = null;
+    }
+
+    private async Task CompleteAuthentication()
+    {
+        ((CustomAuthStateProvider)AuthStateProvider).NotifyUserAuthentication();
+
+        var apps = await AuthService.GetUserApplicationDetailsAsync();
+        if (apps.Count == 1)
+            Navigation.NavigateTo(GetAppRoute(apps[0].AppUrl));
+        else
+            Navigation.NavigateTo("/");
+    }
+
+    private static string GetAppRoute(string? appUrl) =>
+    string.IsNullOrEmpty(appUrl) ? "/" : appUrl;
+
+    private void NavigateToRegister() => Navigation.NavigateTo("/register");
+}
 
 <style>
     .login-page {
@@ -56,251 +178,14 @@
     }
 
     .login-card {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         width: 100%;
         max-width: 420px;
+        border-radius: 12px !important;
         animation: slideUp 0.4s ease-out;
     }
 
     @@keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .logo-section {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-    .logo-section h2 {
-        margin-bottom: 0.5rem;
-        color: #333;
-        font-size: 1.8rem;
-    }
-
-    .subtitle {
-        color: #666;
-        font-size: 0.9rem;
-        margin: 0;
-    }
-
-    /* ✅ Styles pour le lien d'inscription */
-    .register-link {
-        text-align: center;
-        margin-top: 1.5rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid #e0e0e0;
-    }
-
-    .register-link p {
-        margin: 0 0 0.5rem 0;
-        color: #666;
-        font-size: 0.9rem;
-    }
-
-    .register-link .btn-link {
-        color: #667eea;
-        text-decoration: none;
-        font-weight: 500;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 1rem;
-        padding: 0;
-        transition: color 0.2s;
-    }
-
-    .register-link .btn-link:hover {
-        color: #764ba2;
-        text-decoration: underline;
-    }
-
-    @@media (max-width: 480px) {
-        .login-card {
-            padding: 1.5rem;
-        }
-
-        .logo-section h2 {
-            font-size: 1.5rem;
-        }
-    }
-    .register-section {
-        margin-top: 1.5rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid #e0e0e0;
-        text-align: center;
-    }
-
-    .register-section p {
-        margin: 0 0 1rem 0;
-        color: #666;
-        font-size: 0.9rem;
-    }
-
-    .btn-outline-primary {
-        color: #667eea;
-        border: 2px solid #667eea;
-        background: transparent;
-        padding: 0.6rem 1.2rem;
-        border-radius: 6px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-outline-primary:hover {
-        background: #667eea;
-        color: white;
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 </style>
-
-@code {
-    // État de la page
-    private bool isLoading = false;
-    private string? errorMessage;
-    
-    // État MFA
-    private bool requiresMfa = false;
-    private string? mfaSessionId;
-    private bool showQrCode = false;
-    private string? qrCodeBase64;
-    private string? secretKey;
-
-    /// <summary>
-    /// Gérer la soumission du formulaire de login
-    /// </summary>
-    private async Task HandleLogin(AuthenticateRequest request)
-    {
-        isLoading = true;
-        errorMessage = null;
-
-        try
-        {
-            var result = await AuthService.LoginAsync(request.Email, request.Password);
-
-            if (result.Success && result.Data != null)
-            {
-                if (result.Data.RequiresMfa)
-                {
-                    // MFA requis - passer à l'étape 2
-                    requiresMfa = true;
-                    mfaSessionId = result.Data.MfaSessionId;
-                    
-                    // Si c'est la première configuration MFA (QR code présent)
-                    if (!string.IsNullOrEmpty(result.Data.QrCodeBase64))
-                    {
-                        showQrCode = true;
-                        qrCodeBase64 = result.Data.QrCodeBase64;
-                        secretKey = result.Data.SecretKey;
-                    }
-                }
-                else
-                {
-                    // Login réussi sans MFA - rediriger
-                    await CompleteAuthentication();
-                }
-            }
-            else
-            {
-                errorMessage = result.ErrorMessage ?? "Identifiants invalides";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Erreur de connexion: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    /// <summary>
-    /// Gérer la soumission du code MFA
-    /// </summary>
-    private async Task HandleMfaVerify(string code)
-    {
-        if (string.IsNullOrEmpty(mfaSessionId))
-        {
-            errorMessage = "Session MFA invalide";
-            return;
-        }
-
-        isLoading = true;
-        errorMessage = null;
-
-        try
-        {
-            var result = await AuthService.VerifyMfaAsync(mfaSessionId, code);
-
-            if (result.Success && result.Data != null)
-        {
-            // ? Token pr�sent = MFA v�rifi� avec succ�s
-            if (!string.IsNullOrEmpty(result.Data.Token))
-            {
-                Console.WriteLine($"? MFA verified for {result.Data.FullName}");
-                await CompleteAuthentication();
-            }
-            else
-            {
-                errorMessage = "Erreur lors de la g�n�ration du token";
-            }
-        }
-        else
-        {
-            // ? Utilise result.Message (de ApiResponse) au lieu de result.Data.ErrorMessage
-            errorMessage = result.ErrorMessage ?? "Code MFA invalide";
-        }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Erreur de vérification: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    /// <summary>
-    /// Annuler le processus MFA et revenir au login
-    /// </summary>
-    private void HandleCancelMfa()
-    {
-        requiresMfa = false;
-        mfaSessionId = null;
-        showQrCode = false;
-        qrCodeBase64 = null;
-        secretKey = null;
-        errorMessage = null;
-    }
-
-    /// <summary>
-    /// Finaliser l'authentification et notifier Blazor
-    /// </summary>
-    private async Task CompleteAuthentication()
-    {
-        // Notifier le système d'authentification
-        ((CustomAuthStateProvider)AuthStateProvider).NotifyUserAuthentication();
-        
-        // Rediriger vers la page d'accueil
-        Navigation.NavigateTo("/");
-    }
-
-    /// <summary>
-    /// ✅ Naviguer vers la page d'inscription
-    /// </summary>
-    private void NavigateToRegister()
-    {
-        Navigation.NavigateTo("/register");
-    }
-}
