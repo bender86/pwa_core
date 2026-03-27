@@ -85,6 +85,7 @@ builder.Services.AddScoped<IAdminService,AdminService>();
 builder.Services.AddScoped<ITournamentService, TournamentService>();
 builder.Services.AddScoped<IPronosticService, PronosticService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<ISpecialBetService, SpecialBetService>();
 
 builder.Services.AddMudServices();
 

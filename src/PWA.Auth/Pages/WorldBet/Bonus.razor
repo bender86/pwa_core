@@ -1,0 +1,210 @@
+@page "/worldbet/bonus"
+@layout WorldBetLayout
+@attribute [Authorize]
+@using dto.worldbet.Models
+@using dto.worldbet.Requests
+@inject ISpecialBetService SpecialBetService
+@inject ITournamentService TournamentService
+@inject ISnackbar Snackbar
+
+<PageTitle>Bonus — WorldBet 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4 mb-8">
+
+    <MudText Typo="Typo.h5" Class="mb-1">
+        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Class="me-2" Color="Color.Warning" />
+        Bonus Vainqueur
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Pronostique le vainqueur de la Coupe du Monde et gagne <strong>5 points bonus</strong> !
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+    }
+    else if (_status is not null)
+    {
+        @* Deadline info *@
+        @if (_status.IsOpen)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Class="me-1" />
+                Paris ouverts jusqu'au <strong>@(_status.Deadline?.ToString("dd/MM/yyyy à HH:mm"))</strong>
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.LockClock" Class="me-1" />
+                Le tournoi a commencé — les paris sont fermés.
+            </MudAlert>
+        }
+
+        @* My bet *@
+        <MudPaper Elevation="2" Class="pa-5 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Mon pronostic</MudText>
+            <MudDivider Class="mb-4" />
+
+            @if (_status.IsOpen)
+            {
+                <MudSelect T="string"
+                           @bind-Value="_selectedTeam"
+                           Label="Vainqueur de la Coupe du Monde"
+                           Variant="Variant.Outlined"
+                           Disabled="@_isSaving"
+                           AdornmentIcon="@Icons.Material.Filled.EmojiEvents"
+                           AdornmentColor="Color.Warning"
+                           Class="mb-4">
+                    @foreach (var team in _teams)
+                    {
+                        <MudSelectItem Value="@team.Name">@team.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           Disabled="@(_isSaving || string.IsNullOrEmpty(_selectedTeam))"
+                           OnClick="SaveBet"
+                           FullWidth="true">
+                    @if (_isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" />
+                    }
+                    @(_status.MyBet is null ? "Enregistrer mon pronostic" : "Modifier mon pronostic")
+                </MudButton>
+            }
+            else if (_status.MyBet is not null)
+            {
+                <div class="d-flex align-items-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Flag" Color="Color.Primary" />
+                    <div>
+                        <MudText Typo="Typo.h6">@_status.MyBet.ChosenValue</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Placé le @_status.MyBet.PlacedAt.ToString("dd/MM/yyyy à HH:mm")
+                        </MudText>
+                    </div>
+                    @if (_status.MyBet.IsWon == true)
+                    {
+                        <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.Stars">
+                            +@_status.MyBet.BonusPoints pts
+                        </MudChip>
+                    }
+                    else if (_status.MyBet.IsWon == false)
+                    {
+                        <MudChip T="string" Color="Color.Error" Icon="@Icons.Material.Filled.Close">
+                            Perdu
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassTop">
+                            En attente
+                        </MudChip>
+                    }
+                </div>
+            }
+            else
+            {
+                <MudText Color="Color.Secondary">Tu n'as pas placé de pronostic avant le début du tournoi.</MudText>
+            }
+        </MudPaper>
+
+        @* All bets — server only returns them once tournament has started *@
+        @if (_status.AllBets.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-5">
+                <MudText Typo="Typo.h6" Class="mb-3">Pronostics de tous les joueurs</MudText>
+                <MudDivider Class="mb-3" />
+
+                @foreach (var bet in _status.AllBets)
+                {
+                    <div class="d-flex justify-content-between align-items-center py-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText>@bet.PlayerDisplayName</MudText>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <MudText Typo="Typo.body2">@bet.ChosenValue</MudText>
+                            @if (bet.IsWon == true)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                            }
+                            else if (bet.IsWon == false)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Small" />
+                            }
+                        </div>
+                    </div>
+                    <MudDivider />
+                }
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+@code {
+    private SpecialBetStatusDto? _status;
+    private List<TeamDto> _teams = new();
+    private string _selectedTeam = string.Empty;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        try
+        {
+            var statusTask = SpecialBetService.GetWinnerFinalStatusAsync();
+            var teamsTask  = TournamentService.GetAllTeamsAsync();
+            await Task.WhenAll(statusTask, teamsTask);
+
+            _status = statusTask.Result;
+            _teams  = teamsTask.Result;
+
+            // Pre-select existing bet
+            if (_status?.MyBet is not null)
+                _selectedTeam = _status.MyBet.ChosenValue;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur lors du chargement : {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveBet()
+    {
+        _isSaving = true;
+        try
+        {
+            var success = await SpecialBetService.UpsertWinnerFinalAsync(_selectedTeam);
+            if (success)
+            {
+                Snackbar.Add("Pronostic enregistré !", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("Impossible d'enregistrer le pronostic.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erreur : {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

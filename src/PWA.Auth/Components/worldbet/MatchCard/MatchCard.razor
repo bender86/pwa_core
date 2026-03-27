@@ -152,6 +152,8 @@
                         MatchId="@Match.MatchId"
                         ScoreTeam1="@Match.ScoreTeam1"
                         ScoreTeam2="@Match.ScoreTeam2"
+                        MatchFinishedType="@(Match.FinishedType ?? MatchFinishedType.RegularTime)"
+                        PenaltyWinnerTeam="@Match.PenaltyWinnerTeam"
                         OnCalculated="@HandleCalculated" />
                 }
                 <MudTooltip Text="Modifier">

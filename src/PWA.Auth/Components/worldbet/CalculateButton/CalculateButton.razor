@@ -1,5 +1,6 @@
 @* Components/WorldBet/CalculateButton/CalculateButton.razor *@
 @using dto.worldbet.Requests
+@using dto.worldbet.Enums
 @inject IAdminService AdminService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -14,17 +15,12 @@
 </MudTooltip>
 
 @code {
-    [Parameter, EditorRequired]
-    public int MatchId { get; set; }
-    
-    [Parameter, EditorRequired]
-    public int? ScoreTeam1 { get; set; }
-    
-    [Parameter, EditorRequired]
-    public int? ScoreTeam2 { get; set; }
-    
-    [Parameter]
-    public EventCallback OnCalculated { get; set; }
+    [Parameter, EditorRequired] public int MatchId { get; set; }
+    [Parameter, EditorRequired] public int? ScoreTeam1 { get; set; }
+    [Parameter, EditorRequired] public int? ScoreTeam2 { get; set; }
+    [Parameter] public MatchFinishedType MatchFinishedType { get; set; } = MatchFinishedType.RegularTime;
+    [Parameter] public int? PenaltyWinnerTeam { get; set; }
+    [Parameter] public EventCallback OnCalculated { get; set; }
     
     private bool _isCalculating = false;
     
@@ -37,9 +33,7 @@
             cancelText: "Annuler");
 
         if (result == true)
-        {
             await HandleCalculate();
-        }
     }
     
     private async Task HandleCalculate()
@@ -51,35 +45,26 @@
         {
             var request = new UpdateMatchScoreRequest
             {
-                MatchId = MatchId,
-                ScoreTeam1 = ScoreTeam1!.Value,
-                ScoreTeam2 = ScoreTeam2!.Value
+                MatchId           = MatchId,
+                ScoreTeam1        = ScoreTeam1!.Value,
+                ScoreTeam2        = ScoreTeam2!.Value,
+                MatchFinishedType = MatchFinishedType,
+                PenaltyWinnerTeam = PenaltyWinnerTeam
             };
             
             var success = await AdminService.UpdateMatchScore(request);
             
             if (success)
-            {
-                Snackbar.Add(
-                    "Points calculés avec succès !", 
-                    Severity.Success
-                );
-                await OnCalculated.InvokeAsync();
-            }
+                Snackbar.Add("Points calculés avec succès !", Severity.Success);
             else
-            {
-                Snackbar.Add(
-                    "Échec du calcul des points", 
-                    Severity.Error
-                );
-            }
+                Snackbar.Add("Échec du calcul des points", Severity.Error);
+
+            if (success)
+                await OnCalculated.InvokeAsync();
         }
         catch (Exception ex)
         {
-            Snackbar.Add(
-                $"Erreur : {ex.Message}", 
-                Severity.Error
-            );
+            Snackbar.Add($"Erreur : {ex.Message}", Severity.Error);
         }
         finally
         {
