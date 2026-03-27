@@ -1,0 +1,104 @@
+@page "/worldbet/howto"
+@layout WorldBetLayout
+@attribute [Authorize]
+
+<PageTitle>Help — WorldBet 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 mb-8">
+
+    <!-- Header -->
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        WorldBet 2026 — Coupe du Monde USA · Canada · Mexique
+    </MudText>
+
+    <!-- Aide générale -->
+    <MudPaper Elevation="2" Class="pa-5 mb-4">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Class="me-2" Color="Color.Warning" />
+            Retrouvez toutes les infos sur comment utiliser l'application
+        </MudText>
+    </MudPaper>
+
+    <!-- Aide générale -->
+    <MudPaper Elevation="2" Class="pa-5 mb-4">
+        <MudText Typo="Typo.h4" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Apps" Class="me-2"  />Installation de l'app 
+        </MudText>
+         <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="fab fa-apple" Class="me-2" /> IOS
+        </MudText>
+        <MudDivider Class="mb-3" />
+        <MudText Class="mb-4">
+            <ul class="ps-4 text-start">
+                <li>Ouvrez safari puis allez sur le site: <strong>https://maeshome.ddns.net</strong> (Si vous lisez ça c'est que vous y êtes déjà)</li>
+                <li>Allez sur les <strong>...</strong> (en bas à droite)</li>
+                <li>Cliquez sur <strong>Partager</strong></li>
+                <li>Scrollez vers le bas et vous verrez <strong>+ Sur l'écran d'accueil </strong></li>
+            </ul>
+        </MudText>
+
+        <MudText Typo="Typo.h6" Class="mb-5">
+            <MudIcon Icon="bi bi-android2" Class="me-2" /> Android
+        </MudText>
+        <MudDivider Class="mb-3" />
+        <MudText Class="mb-4">
+            <ul class="ps-4 text-start">
+                <li>Ouvrez Chrome puis allez sur le site: <strong>https://maeshome.ddns.net</strong> (Si vous lisez ça c'est que vous y êtes déjà)</li>
+                <li>Allez sur les <strong>...</strong> (en bas à droite)</li>
+                <li>Cliquez sur <strong>Partager</strong></li>
+                <li>Scrollez vers le bas et vous verrez <strong>+ Sur l'écran d'accueil </strong></li>
+            </ul>
+        </MudText>
+    </MudPaper>
+    @* Pronostiquer *@
+    <MudPaper Elevation="2" Class="pa-5 mb-4">
+        <MudText Typo="Typo.h4" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Class="me-2"  />Comment pronostiquer
+        </MudText>
+        <MudDivider Class="mb-3" />
+        <MudText Class="mb-4">
+            <ul class="ps-4 text-start">
+                <li>Sur chaque card d'un match, vous verrez un éclair en bas à gauche
+                    <p><MudImage Src="/printscreen/card1.png" Alt="Card" Class="my-4" /></p>
+                </li>
+                <li>En cliquant dessus, vous arrivez sur le match à pronostiquer et vous avez la possibilité d'activer votre joker (3 disponibles) 
+                    <MudLink Href="https://maeshome.ddns.net/worldbet/rules" Typo="Typo.body2">
+                            Voir le règlement
+                        </MudLink>
+                    <p><MudImage Src="/printscreen/prono.png" Alt="Card" Class="my-4" /></p>
+                </li>
+            </ul>
+        </MudText>
+    </MudPaper>
+
+    <!-- Liens vidéo -->
+    <MudPaper Elevation="2" Class="pa-5 mb-4">
+
+        <MudSimpleTable Hover="true" Bordered="true" Dense="true" Class="mb-3">
+            <thead>
+                <tr style="background: #2a5298;color:white;font-size:16px;font-weight:bold;">
+                    <th>Aide</th>
+                    <th>Lien</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Comment installer l'app</td>
+                    <td><MudChip T="string" Color="Color.Warning" Size="Size.Small"><MudLink  Href="https://youtube.com/shorts/GQbqGwAFOd8?feature=share" Typo="Typo.body2">
+                            Voir la vidéo
+                        </MudLink></MudChip></td>
+                </tr>
+                <tr>
+                    <td>Comment activer les notifs</td>
+                    <td><MudChip T="string" Color="Color.Warning" Size="Size.Small"><MudLink Href="https://youtube.com/shorts/Bo9bFOq0Zj0?feature=share" Typo="Typo.body2">
+                            Voir la vidéo
+                        </MudLink></MudChip></td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+
+    </MudPaper>
+
+
+</MudContainer>
+
