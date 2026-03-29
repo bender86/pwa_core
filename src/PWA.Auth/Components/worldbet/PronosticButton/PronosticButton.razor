@@ -60,7 +60,7 @@ else
     private bool CanPronostic()
     {
         return Match.Status == MatchStatus.Scheduled 
-            && DateTime.UtcNow < Match.LockPronosticsAt;
+            && DateTime.Now < Match.LockPronosticsAt;
     }
 
     private async Task OpenModal()

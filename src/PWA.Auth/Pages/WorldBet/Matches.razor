@@ -455,7 +455,7 @@
         var match = allMatches.FirstOrDefault(m => m.MatchId == matchId);
         if (match == null) return;
 
-        if (match.Status != MatchStatus.Scheduled || DateTime.UtcNow >= match.LockPronosticsAt)
+        if (match.Status != MatchStatus.Scheduled || DateTime.Now >= match.LockPronosticsAt)
         {
             Snackbar.Add("Les pronostics pour ce match sont fermés.", Severity.Warning);
             return;

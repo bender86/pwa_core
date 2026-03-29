@@ -154,7 +154,7 @@
     private int availableJokers = 0;
     private bool CanUseJoker =>
         (availableJokers > 0 || hasExistingJoker) &&
-        DateTime.UtcNow < Match.LockPronosticsAt;
+        DateTime.Now < Match.LockPronosticsAt;
 
     private int? team1Score;
     private int? team2Score;

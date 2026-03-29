@@ -191,7 +191,7 @@ namespace PWA.Auth.Services
                         Active = true,
                         MfaEnabled = currentUser.MfaEnabled ?? false,
                         Status = dto.user.Enums.UserStatus.Active,
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.Now
                     };
                 }
             }

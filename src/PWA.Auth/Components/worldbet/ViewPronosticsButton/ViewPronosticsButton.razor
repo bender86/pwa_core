@@ -37,7 +37,7 @@
                        Status.Value == MatchStatus.Live;
             }
             
-            return !ScheduledDate.HasValue || DateTime.UtcNow >= ScheduledDate.Value;
+            return !ScheduledDate.HasValue || DateTime.Now >= ScheduledDate.Value;
         }
     }
     

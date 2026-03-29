@@ -236,7 +236,7 @@
     };
 
     private bool CanPronostic() =>
-        Match.Status == MatchStatus.Scheduled && DateTime.UtcNow < Match.LockPronosticsAt;
+        Match.Status == MatchStatus.Scheduled && DateTime.Now < Match.LockPronosticsAt;
 }
 
 <style>
