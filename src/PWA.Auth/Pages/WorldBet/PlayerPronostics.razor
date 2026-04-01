@@ -151,25 +151,40 @@
                         <!-- Points -->
                         <TemplateColumn Title="Points" Sortable="true" SortBy="@(x => x.PointsEarned)">
                             <CellTemplate>
-                                <MudChip T="string" 
-                                        Color="@GetPointsColor(context.Item.PointsEarned)" 
-                                        Size="Size.Small"
-                                        Icon="@GetPointsIcon(context.Item.PointsEarned)">
-                                    @context.Item.PointsEarned pts
-                                </MudChip>
+                                <div class="d-flex align-items-center gap-1">
+                                    <MudChip T="string"
+                                            Color="@GetPointsColor(context.Item.PointsEarned)"
+                                            Size="Size.Small"
+                                            Icon="@GetPointsIcon(context.Item.PointsEarned)">
+                                        @context.Item.PointsEarned pts
+                                    </MudChip>
+                                    @if (context.Item.HasJoker)
+                                    {
+                                        <MudTooltip Text="Joker utilisé (points x2)">
+                                            <MudIcon Icon="@Icons.Material.Filled.Bolt"
+                                                    Color="Color.Warning"
+                                                    Size="Size.Small" />
+                                        </MudTooltip>
+                                    }
+                                </div>
                             </CellTemplate>
                         </TemplateColumn>
 
-                        <!-- Détail -->
+                        <!-- Résultat -->
                         <TemplateColumn Title="Résultat" Sortable="false">
                             <CellTemplate>
-                                <MudText Typo="Typo.body2" Color="@GetResultColor(context.Item.PointsEarned)">
-                                    @GetResultText(context.Item.PointsEarned)
-                                </MudText>
+                                <div class="d-flex flex-column">
+                                    <MudText Typo="Typo.body2" Color="@GetResultColor(context.Item.PointsEarned)">
+                                        @GetResultText(context.Item.PointsEarned)
+                                    </MudText>
+                                    @if (context.Item.HasJoker)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Warning">⚡ Joker</MudText>
+                                    }
+                                </div>
                             </CellTemplate>
                         </TemplateColumn>
                     </Columns>
-
                     <PagerContent>
                         <MudDataGridPager T="PronosticDto" />
                     </PagerContent>
@@ -266,42 +281,43 @@
 
     private Color GetRankColor(int rank) => rank switch
     {
-        1 => Color.Warning,
-        2 => Color.Default,
-        3 => Color.Default,
-        _ => Color.Default
+        1 or 2 => Color.Warning,
+        3      => Color.Default,
+        _      => Color.Default
     };
 
     private Color GetPointsColor(int points) => points switch
     {
-        3 => Color.Success,
-        1 => Color.Info,
-        0 => Color.Warning,
-        _ => Color.Default
+        3 or 6 => Color.Success,
+        1 or 2 => Color.Info,
+        0      => Color.Warning,
+        _      => Color.Default
     };
 
     private string GetPointsIcon(int points) => points switch
     {
-        3 => Icons.Material.Filled.Star,
-        1 => Icons.Material.Filled.Check,
-        0 => Icons.Material.Filled.Done,
-        _ => Icons.Material.Filled.Close
+        3 or 6 => Icons.Material.Filled.Star,
+        1 or 2 => Icons.Material.Filled.Check,
+        0      => Icons.Material.Filled.Done,
+        _      => Icons.Material.Filled.Close
     };
 
     private Color GetResultColor(int points) => points switch
     {
-        3 => Color.Success,
-        1 => Color.Info,
-        0 => Color.Warning,
-        _ => Color.Error
+        3 or 6 => Color.Success,
+        1 or 2 => Color.Info,
+        0      => Color.Warning,
+        _      => Color.Error
     };
 
     private string GetResultText(int points) => points switch
     {
-        3 => "Score exact !",
-        1 => "Bonne différence",
-        0 => "Bon vainqueur",
-        _ => "Raté"
+        6      => "Score exact ! (x2)",
+        3      => "Score exact !",
+        2      => "Bon résultat (x2)",
+        1      => "Bon résultat",
+        0      => "Raté",
+        _      => "Raté"
     };
 
     private decimal GetSuccessRate()

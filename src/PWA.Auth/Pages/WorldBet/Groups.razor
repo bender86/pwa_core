@@ -166,7 +166,9 @@
                             else
                             {
                                 <div class="d-flex flex-column gap-3">
-                                    @foreach (var match in currentMatches.OrderBy(m => m.ScheduledDate))
+                                    @foreach (var match in currentMatches
+                                        .OrderBy(m => m.Status == MatchStatus.Finished ? 1 : 0)
+                                        .ThenBy(m => m.ScheduledDate))
                                     {
                                         var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
                                         <MatchCard Match="@match"

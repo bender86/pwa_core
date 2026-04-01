@@ -375,10 +375,10 @@
 
     private decimal GetSuccessRate(LeaderboardDto player)
     {
-        if (player.PronosticsCount == 0)
-            return 0;
+        if (player.FinishedPronosticsCount == 0)
+        return 0;
 
-        return Math.Round((decimal)(player.CorrectScores + player.CorrectWinners) / player.PronosticsCount * 100, 1);
+    return Math.Round((decimal)player.CorrectWinners / player.FinishedPronosticsCount * 100, 1);
     }
 
     private bool IsCurrentPlayer(LeaderboardDto player)

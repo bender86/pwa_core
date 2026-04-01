@@ -26,61 +26,55 @@
     <MudDivider />
 
     @* Teams & Score *@
-    <div class="match-teams-row px-3 py-3">
-        @* Team 1 *@
-        <div class="team-block">
-            @if (!string.IsNullOrEmpty(Match.FlagUrlTeam1))
-            {
-                <img src="@Match.FlagUrlTeam1" alt="@Match.Team1Name" class="team-flag" />
-            }
-            <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
-                @Match.Team1Name
-            </MudText>
-            @if (Match.ScoreTeam1.HasValue)
-            {
-                <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">
-                    @Match.ScoreTeam1
-                </MudText>
-            }
-        </div>
-
-        @* VS / Score separator *@
-        <div class="score-separator">
-            @if (Match.ScoreTeam1.HasValue && Match.ScoreTeam2.HasValue)
-            {
-                <MudText Typo="Typo.h5" Color="Color.Secondary">-</MudText>
-                @if (Match.FinishedType == MatchFinishedType.ExtraTime)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Info">a.p.</MudText>
-                }
-                else if (Match.FinishedType == MatchFinishedType.Penalties)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Warning">t.a.b.</MudText>
-                }
-            }
-            else
-            {
-                <MudText Typo="Typo.h6" Color="Color.Secondary">VS</MudText>
-            }
-        </div>
-
-        @* Team 2 *@
-        <div class="team-block">
-            @if (!string.IsNullOrEmpty(Match.FlagUrlTeam2))
-            {
-                <img src="@Match.FlagUrlTeam2" alt="@Match.Team2Name" class="team-flag" />
-            }
-            <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
-                @Match.Team2Name
-            </MudText>
-            @if (Match.ScoreTeam2.HasValue)
-            {
-                <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">
-                    @Match.ScoreTeam2
-                </MudText>
-            }
-        </div>
+<div class="match-teams-row px-3 py-3">
+    @* Team 1 *@
+    <div class="team-block">
+        @if (!string.IsNullOrEmpty(Match.FlagUrlTeam1))
+        {
+            <img src="@Match.FlagUrlTeam1" alt="@Match.Team1Name" class="team-flag" />
+        }
+        <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
+            @Match.Team1Name
+        </MudText>
     </div>
+
+    @* Score / VS *@
+    <div class="score-separator">
+        @if (Match.ScoreTeam1.HasValue && Match.ScoreTeam2.HasValue)
+        {
+            <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">
+                @Match.ScoreTeam1
+            </MudText>
+            <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mx-1">-</MudText>
+            <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">
+                @Match.ScoreTeam2
+            </MudText>
+            @if (Match.FinishedType == MatchFinishedType.ExtraTime)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Info" Class="ms-1">a.p.</MudText>
+            }
+            else if (Match.FinishedType == MatchFinishedType.Penalties)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Warning" Class="ms-1">t.a.b.</MudText>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Color="Color.Secondary">VS</MudText>
+        }
+    </div>
+
+    @* Team 2 *@
+    <div class="team-block">
+        @if (!string.IsNullOrEmpty(Match.FlagUrlTeam2))
+        {
+            <img src="@Match.FlagUrlTeam2" alt="@Match.Team2Name" class="team-flag" />
+        }
+        <MudText Typo="Typo.body1" Style="font-weight: 600; text-align: center;">
+            @Match.Team2Name
+        </MudText>
+    </div>
+</div>
 
     @* Date & Lock *@
     <div class="px-3 pb-2 d-flex justify-content-center gap-4">
@@ -257,10 +251,9 @@
 
     .score-separator {
         display: flex;
-        flex-direction: column;
         align-items: center;
+        justify-content: center;
         flex-shrink: 0;
-        min-width: 40px;
     }
 
     .team-flag {

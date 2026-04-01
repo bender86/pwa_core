@@ -46,7 +46,7 @@
                     <div class="carousel-container">
                         <MudCarousel @ref="carouselUpcoming"
                                     Class="carousel-custom" 
-                                    Style="height: auto; min-height: 500px;"
+                                    Style="height: auto;height: 480px; "
                                     ShowArrows="@(upcomingMatches.Count > 1)" 
                                     ShowBullets="@(upcomingMatches.Count > 1)"
                                     EnableSwipeGesture="true"
@@ -60,7 +60,7 @@
                                 var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
                                 
                                 <MudCarouselItem Transition="Transition.Slide" Class="carousel-item-custom">
-                                    <div class="d-flex justify-center align-center" style="width: 100%; min-height: 500px;">
+                                    <div class="d-flex justify-center align-center" style="width: 100%;height: 100%;">
                                         <div class="carousel-card-wrapper">
                                             <MatchCard Match="@match" 
                                                     HasPronostic="@hasProno" 
@@ -109,7 +109,7 @@
                     <div class="carousel-container">
                         <MudCarousel @ref="carouselRecent"
                                     Class="carousel-custom" 
-                                    Style="height: auto; min-height: 500px;"
+                                    Style="height: auto; height: 480px;"
                                     ShowArrows="@(recentMatches.Count > 1)" 
                                     ShowBullets="@(recentMatches.Count > 1)"
                                     EnableSwipeGesture="true"
@@ -123,7 +123,7 @@
                                 var hasProno = userPronostics.TryGetValue(match.MatchId, out var prono);
                                 
                                 <MudCarouselItem Transition="Transition.Slide" Class="carousel-item-custom">
-                                    <div class="d-flex justify-center align-center" style="width: 100%; min-height: 500px;">
+                                    <div class="d-flex justify-center align-center" style="width: 100%; height: 100%;">
                                         <div class="carousel-card-wrapper">
                                             <MatchCard Match="@match" 
                                                     HasPronostic="@hasProno" 
@@ -140,51 +140,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Quick Stats -->
-    <MudGrid Class="mt-5">
-        <MudItem xs="12" md="4">
-            <MudPaper Elevation="2" Class="stat-card pa-4">
-                <div class="d-flex align-center">
-                    <div class="stat-icon me-4">
-                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Large" />
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.h4" Class="mb-0">@userPronostics.Count</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Pronostics actifs</MudText>
-                    </div>
-                </div>
-            </MudPaper>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudPaper Elevation="2" Class="stat-card pa-4">
-                <div class="d-flex align-center">
-                    <div class="stat-icon me-4">
-                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" />
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.h4" Class="mb-0">@upcomingMatches.Count</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Matches à venir</MudText>
-                    </div>
-                </div>
-            </MudPaper>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudPaper Elevation="2" Class="stat-card pa-4">
-                <div class="d-flex align-center">
-                    <div class="stat-icon me-4">
-                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Large" />
-                    </div>
-                    <div>
-                        <MudText Typo="Typo.h4" Class="mb-0">@recentMatches.Count</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Résultats récents</MudText>
-                    </div>
-                </div>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
 </div>
 
 @code {
@@ -219,7 +174,7 @@
         isLoadingUpcoming = true;
         try
         {
-            upcomingMatches = await TournamentService.GetUpcomingMatchesAsync(10);
+            upcomingMatches = await TournamentService.GetUpcomingMatchesAsync(5);
         }
         catch (Exception ex)
         {
@@ -237,7 +192,7 @@
         isLoadingRecent = true;
         try
         {
-            recentMatches = await TournamentService.GetRecentMatchesAsync(10);
+            recentMatches = await TournamentService.GetRecentMatchesAsync(5);
         }
         catch (Exception ex)
         {
@@ -380,11 +335,11 @@
         }
 
         .carousel-container {
-            min-height: 450px;
+            min-height: unset;
         }
 
         .carousel-custom {
-            min-height: 450px !important;
+            height: 420px !important;  /* au lieu de min-height: unset */
         }
 
         .carousel-card-wrapper {

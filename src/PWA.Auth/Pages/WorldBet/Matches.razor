@@ -247,7 +247,8 @@
                 m.Team1Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
                 m.Team2Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
                 m.PhaseName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-        ).OrderBy(m => m.ScheduledDate).ToList();
+        ).OrderBy(m => m.Status == MatchStatus.Finished ? 1 : 0)
+         .ThenBy(m => m.ScheduledDate).ToList();
     }
     private void OnPhaseChanged(string value)
     {
@@ -456,12 +457,9 @@
         if (match == null) return;
 
         if (match.Status != MatchStatus.Scheduled || DateTime.Now >= match.LockPronosticsAt)
-        {
-            Snackbar.Add("Les pronostics pour ce match sont fermés.", Severity.Warning);
-            return;
-        }
-
-        await OpenPronosticModal(match);
+            await OpenPronosticPlayersModal(match);
+        else
+            await OpenPronosticModal(match);
     }
 
     // Ouvre le PronosticModal directement (même logique que PronosticButton)
@@ -493,6 +491,31 @@
 
         if (!result.Canceled && result.Data is PronosticDto prono)
             await HandlePronosticSavedInGrid(prono);
+    }
+
+    // Ouvre le PronosticModal directement (même logique que PronosticButton)
+    private async Task OpenPronosticPlayersModal(MatchDto match)
+    {
+        var parameters = new DialogParameters<MatchPronosticsDialog>
+        {
+            { x => x.MatchId, matchId }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true,
+            BackdropClick = false,
+            Position = DialogPosition.Center
+        };
+
+        await DialogService.ShowAsync<MatchPronosticsDialog>(
+            "Pronostics du match",
+            parameters,
+            options
+        );
     }
     
     private void CloseModal()
