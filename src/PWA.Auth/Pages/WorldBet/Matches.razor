@@ -456,10 +456,10 @@
         var match = allMatches.FirstOrDefault(m => m.MatchId == matchId);
         if (match == null) return;
 
-        if (match.Status != MatchStatus.Scheduled || DateTime.Now >= match.LockPronosticsAt)
-            await OpenPronosticPlayersModal(match);
-        else
+        if (match.Status == MatchStatus.Scheduled && DateTime.Now < match.LockPronosticsAt)
             await OpenPronosticModal(match);
+        else
+            await OpenPronosticPlayersModal(match);
     }
 
     // Ouvre le PronosticModal directement (même logique que PronosticButton)
@@ -498,7 +498,7 @@
     {
         var parameters = new DialogParameters<MatchPronosticsDialog>
         {
-            { x => x.MatchId }
+            { x => x.MatchId, match.MatchId }
         };
 
         var options = new DialogOptions
