@@ -1,4 +1,8 @@
+
 using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using System.Net;
 using System.Net.Http.Headers;
 
 namespace PWA.Auth.Handlers
@@ -33,6 +37,8 @@ namespace PWA.Auth.Handlers
                 await _localStorage.RemoveItemAsync("authToken", cancellationToken);
                 _navigation.NavigateTo("/login", forceLoad: false);
             }
+
+            return response;
         }
     }
 }
