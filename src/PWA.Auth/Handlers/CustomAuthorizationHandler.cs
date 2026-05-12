@@ -6,10 +6,14 @@ namespace PWA.Auth.Handlers
     public class CustomAuthorizationHandler : DelegatingHandler
     {
         private readonly ILocalStorageService _localStorage;
+        private readonly NavigationManager _navigation;
 
-        public CustomAuthorizationHandler(ILocalStorageService localStorage)
+        public CustomAuthorizationHandler(
+            ILocalStorageService localStorage,
+            NavigationManager navigation)
         {
             _localStorage = localStorage;
+            _navigation   = navigation;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -19,18 +23,16 @@ namespace PWA.Auth.Handlers
             // R�cup�rer le token depuis localStorage
             var token = await _localStorage.GetItemAsStringAsync("authToken", cancellationToken);
 
-            // Ajouter le header Authorization si le token existe
             if (!string.IsNullOrWhiteSpace(token))
-            {
-                Console.WriteLine($"Adding Bearer token: {token.Substring(0, 20)}..."); // Log pour debug
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            }
-            else
-            {
-                Console.WriteLine("?? No token found in localStorage");
-            }
 
-            return await base.SendAsync(request, cancellationToken);
+            var response = await base.SendAsync(request, cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                await _localStorage.RemoveItemAsync("authToken", cancellationToken);
+                _navigation.NavigateTo("/login", forceLoad: false);
+            }
         }
     }
 }
