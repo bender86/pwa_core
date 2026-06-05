@@ -98,6 +98,14 @@
                         </CellTemplate>
                     </TemplateColumn>
 
+                    <TemplateColumn Title="Payé" Sortable="false">
+                        <CellTemplate>
+                            <MudIcon Icon="@(context.Item.Paid == true ? Icons.Material.Filled.Euro : Icons.Material.Filled.Euro)"
+                                     Color="@(context.Item.Paid == true ? Color.Success : Color.Error)"
+                                     Size="Size.Small" />
+                        </CellTemplate>
+                    </TemplateColumn>
+
                     <TemplateColumn Title="Statut" Sortable="false">
                         <CellTemplate>
                             <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Item.Status)">
