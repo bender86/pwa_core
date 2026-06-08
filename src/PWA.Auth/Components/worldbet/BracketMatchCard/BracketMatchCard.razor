@@ -6,7 +6,6 @@
 
 @if (IsTbd || Match == null)
 {
-    <!-- Placeholder TBD -->
     <MudPaper Elevation="@(IsHighlighted ? 4 : 1)"
               Class="@($"bracket-card tbd {(IsHighlighted ? "highlighted" : "")}")">
         <div class="bracket-team-row">
@@ -27,12 +26,15 @@
 }
 else
 {
-    <!-- Vrai MatchCard en mode compact -->
     <div class="bracket-card-wrapper @(IsHighlighted ? "highlighted-wrapper" : "")">
         <MatchCard Match="@Match"
                    HasPronostic="@HasPronostic"
                    UserPronostic="@UserPronostic"
-                   OnPronosticSaved="@OnPronosticSaved" />
+                   OnPronosticSaved="@OnPronosticSaved"
+                   IsAdmin="@IsAdmin"
+                   OnEdit="@OnEdit"
+                   OnDelete="@OnDelete"
+                   OnCalculated="@OnCalculated" />
     </div>
 }
 
@@ -45,6 +47,10 @@ else
     [Parameter] public bool HasPronostic { get; set; }
     [Parameter] public PronosticDto? UserPronostic { get; set; }
     [Parameter] public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
+    [Parameter] public bool IsAdmin { get; set; } = false;
+    [Parameter] public EventCallback<MatchDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<MatchDto> OnDelete { get; set; }
+    [Parameter] public EventCallback OnCalculated { get; set; }
 }
 
 <style>
@@ -93,17 +99,15 @@ else
         border-top: 1px solid var(--mud-palette-divider);
     }
 
-    /* MatchCard en mode compact */
     .bracket-card-wrapper {
         width: 190px;
-        font-size: 11px;
     }
 
     .bracket-card-wrapper :deep(.mud-paper) {
         font-size: 11px;
     }
 
-    .bracket-card-wrapper :deep(.mud-text) {
+    .bracket-card-wrapper :deep(.mud-typography) {
         font-size: 11px !important;
     }
 

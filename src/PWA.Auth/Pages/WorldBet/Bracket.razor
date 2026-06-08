@@ -5,6 +5,8 @@
 @layout WorldBetLayout
 @inject ITournamentService TournamentService
 @inject IPronosticService PronosticService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @attribute [Authorize]
 
@@ -43,7 +45,10 @@
                                         IsTbd="@IsTbd(idx)"
                                         HasPronostic="@HasProno(GetR16Match(idx)?.MatchId)"
                                         UserPronostic="@GetProno(GetR16Match(idx)?.MatchId)"
-                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                        OnPronosticSaved="@HandlePronosticSaved"
+                                        IsAdmin="@isAdmin"
+                                        OnEdit="@HandleEdit"
+                                        OnDelete="@HandleDelete" />
                                     <div class="connector-h"></div>
                                 </div>
                             }
@@ -66,7 +71,10 @@
                                         IsTbd="@(m == null || IsTbdMatch(m))"
                                         HasPronostic="@HasProno(m?.MatchId)"
                                         UserPronostic="@GetProno(m?.MatchId)"
-                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                        OnPronosticSaved="@HandlePronosticSaved"
+                                        IsAdmin="@isAdmin"
+                                        OnEdit="@HandleEdit"
+                                        OnDelete="@HandleDelete" />
                                     <div class="connector-h"></div>
                                 </div>
                             }
@@ -89,7 +97,10 @@
                                         IsTbd="@(m == null || IsTbdMatch(m))"
                                         HasPronostic="@HasProno(m?.MatchId)"
                                         UserPronostic="@GetProno(m?.MatchId)"
-                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                        OnPronosticSaved="@HandlePronosticSaved"
+                                        IsAdmin="@isAdmin"
+                                        OnEdit="@HandleEdit"
+                                        OnDelete="@HandleDelete" />
                                     <div class="connector-h"></div>
                                 </div>
                             }
@@ -110,14 +121,17 @@
                                     IsTbd="@(sf140 == null || IsTbdMatch(sf140))"
                                     HasPronostic="@HasProno(sf140?.MatchId)"
                                     UserPronostic="@GetProno(sf140?.MatchId)"
-                                    OnPronosticSaved="@HandlePronosticSaved" />
+                                    OnPronosticSaved="@HandlePronosticSaved"
+                                    IsAdmin="@isAdmin"
+                                    OnEdit="@HandleEdit"
+                                    OnDelete="@HandleDelete" />
                                 <div class="connector-h"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ===== CENTRE ===== -->
+                <!-- ===== CENTRE : Finale (143) + 3e place (142) ===== -->
                 <div class="bracket-center">
                     <div class="round-label">Finale</div>
                     @{ var finalMatch = GetMatchByNumber(143); }
@@ -130,7 +144,10 @@
                             HasPronostic="@HasProno(finalMatch?.MatchId)"
                             UserPronostic="@GetProno(finalMatch?.MatchId)"
                             OnPronosticSaved="@HandlePronosticSaved"
-                            IsHighlighted="true" />
+                            IsHighlighted="true"
+                            IsAdmin="@isAdmin"
+                            OnEdit="@HandleEdit"
+                            OnDelete="@HandleDelete" />
                     </div>
 
                     @if (!string.IsNullOrEmpty(champion))
@@ -152,7 +169,10 @@
                             IsTbd="@(thirdMatch == null || IsTbdMatch(thirdMatch))"
                             HasPronostic="@HasProno(thirdMatch?.MatchId)"
                             UserPronostic="@GetProno(thirdMatch?.MatchId)"
-                            OnPronosticSaved="@HandlePronosticSaved" />
+                            OnPronosticSaved="@HandlePronosticSaved"
+                            IsAdmin="@isAdmin"
+                            OnEdit="@HandleEdit"
+                            OnDelete="@HandleDelete" />
                     </div>
                 </div>
 
@@ -173,7 +193,10 @@
                                     IsTbd="@(sf141 == null || IsTbdMatch(sf141))"
                                     HasPronostic="@HasProno(sf141?.MatchId)"
                                     UserPronostic="@GetProno(sf141?.MatchId)"
-                                    OnPronosticSaved="@HandlePronosticSaved" />
+                                    OnPronosticSaved="@HandlePronosticSaved"
+                                    IsAdmin="@isAdmin"
+                                    OnEdit="@HandleEdit"
+                                    OnDelete="@HandleDelete" />
                                 <div class="connector-h"></div>
                             </div>
                         </div>
@@ -195,7 +218,10 @@
                                         IsTbd="@(m == null || IsTbdMatch(m))"
                                         HasPronostic="@HasProno(m?.MatchId)"
                                         UserPronostic="@GetProno(m?.MatchId)"
-                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                        OnPronosticSaved="@HandlePronosticSaved"
+                                        IsAdmin="@isAdmin"
+                                        OnEdit="@HandleEdit"
+                                        OnDelete="@HandleDelete" />
                                     <div class="connector-h"></div>
                                 </div>
                             }
@@ -218,7 +244,10 @@
                                         IsTbd="@(m == null || IsTbdMatch(m))"
                                         HasPronostic="@HasProno(m?.MatchId)"
                                         UserPronostic="@GetProno(m?.MatchId)"
-                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                        OnPronosticSaved="@HandlePronosticSaved"
+                                        IsAdmin="@isAdmin"
+                                        OnEdit="@HandleEdit"
+                                        OnDelete="@HandleDelete" />
                                     <div class="connector-h"></div>
                                 </div>
                             }
@@ -241,7 +270,10 @@
                                         IsTbd="@IsTbd(idx)"
                                         HasPronostic="@HasProno(GetR16Match(idx)?.MatchId)"
                                         UserPronostic="@GetProno(GetR16Match(idx)?.MatchId)"
-                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                        OnPronosticSaved="@HandlePronosticSaved"
+                                        IsAdmin="@isAdmin"
+                                        OnEdit="@HandleEdit"
+                                        OnDelete="@HandleDelete" />
                                 </div>
                             }
                         </div>
@@ -255,6 +287,7 @@
 
 @code {
     private bool isLoading = true;
+    private bool isAdmin = false;
     private List<MatchDto> allMatches = new();
     private List<MatchDto> r16Matches = new();
     private Dictionary<int, PronosticDto> userPronostics = new();
@@ -263,8 +296,6 @@
 
     private const string TbdName = "TBD1";
 
-    // R32Structure trié par MatchNumber (100→117)
-    // Gauche : idx 0-7 (MN 100-108), Droite : idx 8-15 (MN 109-117)
     private static readonly (string Team1, string Team2)[] R32Structure =
     [
         ("1er Groupe E", "3e A/B/C/D/F"),   // idx 0 → MN 100
@@ -285,7 +316,6 @@
         ("1er Groupe K", "3e D/E/I/J/L"),   // idx 15 → MN 117
     ];
 
-    // Correspondance R8 → deux R16 qui l'alimentent (MatchNumbers)
     private static readonly Dictionary<int, (int R16a, int R16b)> R8ToR16 = new()
     {
         [120] = (100, 101),
@@ -298,7 +328,6 @@
         [127] = (116, 117),
     };
 
-    // Correspondance QF → deux R8 qui l'alimentent
     private static readonly Dictionary<int, (int R8a, int R8b)> QFToR8 = new()
     {
         [130] = (120, 121),
@@ -309,6 +338,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var user = await AuthService.GetCurrentUserAsync();
+        isAdmin = user?.Admin ?? false;
+
         await Task.WhenAll(LoadMatches(), LoadPronostics());
     }
 
@@ -359,6 +391,14 @@
         }
     }
 
+    // ===== Admin handlers =====
+
+    private void HandleEdit(MatchDto match)
+        => Navigation.NavigateTo($"/worldbet/admin/matches?edit={match.MatchId}");
+
+    private Task HandleDelete(MatchDto match)
+        => LoadMatches(); // Rafraîchit après suppression
+
     // ===== Helpers =====
 
     private MatchDto? GetMatchByNumber(int mn)
@@ -377,26 +417,22 @@
         => m.Team1Name == TbdName || m.Team2Name == TbdName
         || string.IsNullOrEmpty(m.Team1Name) || string.IsNullOrEmpty(m.Team2Name);
 
-    // Label placeholder pour R8 : "N°100" / "N°101"
     private string GetR16Label(int r16Idx)
     {
-        var mn = r16MatchNumbers.ElementAtOrDefault(r16Idx);
+        if (r16Idx < 0 || r16Idx >= r16MatchNumbers.Length) return "TBD";
+        var mn = r16MatchNumbers[r16Idx];
         return mn > 0 ? $"N°{mn}" : "TBD";
     }
 
-    // Index R16 (0-15) à partir du MatchNumber R16
     private int GetR16IdxByMN(int mn)
         => Array.IndexOf(r16MatchNumbers, mn);
 
-    // Pour un R8 (mn) et position (0=équipe1, 1=équipe2), retourne l'index R16
     private int GetR16IdxForR8(int r8mn, int pos)
     {
         if (!R8ToR16.TryGetValue(r8mn, out var pair)) return -1;
-        var targetMN = pos == 0 ? pair.R16a : pair.R16b;
-        return GetR16IdxByMN(targetMN);
+        return GetR16IdxByMN(pos == 0 ? pair.R16a : pair.R16b);
     }
 
-    // Pour un QF (mn) et position, retourne le MatchNumber R8
     private int GetR8PrevLabel(int qfmn, int pos)
     {
         if (!QFToR8.TryGetValue(qfmn, out var pair)) return 0;
@@ -426,20 +462,18 @@
 
     .bracket-wrapper {
         display: flex;
-        align-items: center;  /* Centre verticalement tout le contenu */
+        align-items: center;
         min-width: 1600px;
         padding: 1rem 0.5rem;
         gap: 0;
     }
 
-    /* ===== SIDES ===== */
     .bracket-side {
         display: flex;
         flex-direction: row;
         flex: 1;
     }
 
-    /* ===== ROUNDS ===== */
     .bracket-round {
         display: flex;
         flex-direction: column;
@@ -460,36 +494,27 @@
         letter-spacing: 1px;
     }
 
-    /* ===== SLOTS ===== */
     .round-slots {
         display: flex;
         flex-direction: column;
         flex: 1;
         justify-content: space-around;
-    }
-
-    /* Espacement selon la phase */
-    .slots-r8  { gap: 16px; }
-    .slots-qf  { gap: 100px; }
-    .slots-sf  { gap: 240px; }
-
-    /* Espacement entre les 16es */
-    .round-slots:not(.slots-r8):not(.slots-qf):not(.slots-sf) {
         gap: 8px;
     }
+
+    .slots-r8 { gap: 16px; }
+    .slots-qf { gap: 100px; }
+    .slots-sf { gap: 240px; }
 
     .bracket-slot {
         display: flex;
         align-items: center;
-        position: relative;
     }
 
-    /* Slots avec connecteur des deux côtés */
     .slot-paired {
         justify-content: center;
     }
 
-    /* ===== CONNECTEURS ===== */
     .connector-h {
         width: 12px;
         height: 2px;
@@ -497,7 +522,6 @@
         flex-shrink: 0;
     }
 
-    /* ===== CENTRE ===== */
     .bracket-center {
         display: flex;
         flex-direction: column;
@@ -505,14 +529,15 @@
         justify-content: center;
         min-width: 240px;
         padding: 0 8px;
-        align-self: center;  /* Centre verticalement dans le wrapper */
+        align-self: center;
     }
 
-    .final-slot, .third-place-slot {
+    .final-slot {
         width: 100%;
     }
 
     .third-place-slot {
+        width: 100%;
         opacity: 0.85;
         margin-top: 2rem;
     }
@@ -525,6 +550,7 @@
         border-radius: 12px;
         padding: 1rem;
         width: 100%;
+        margin-top: 1rem;
     }
 
     .champion-trophy {
