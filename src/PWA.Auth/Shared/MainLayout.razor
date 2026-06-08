@@ -11,9 +11,9 @@
         <div class="nav-brand-section">
             @if (isWorldBetSection)
             {
-                <a href="/" class="nav-brand-link" title="Retour au dashboard">
+                <button class="nav-brand-link" @onclick="GoBack" title="Retour">
                     <i class="bi bi-arrow-left"></i>
-                </a>
+                </button>
                 <span class="nav-brand">🏆 WorldBet</span>
             }
             else
@@ -128,6 +128,11 @@
         }
     }
 
+    private void GoBack()
+    {
+        Navigation.NavigateTo("javascript:history.back()");
+    }
+
     private async Task HandleLogout()
     {
         showDropdown = false;
@@ -184,6 +189,10 @@
         font-size: 1.5rem;
         opacity: 0.9;
         transition: opacity 0.2s;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
     }
     
     .nav-brand-link:hover {
