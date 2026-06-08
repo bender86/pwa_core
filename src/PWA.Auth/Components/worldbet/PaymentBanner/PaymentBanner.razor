@@ -1,0 +1,139 @@
+@namespace PWA.Auth.Components.worldbet.PaymentBanner
+@if (showBanner)
+{
+    <div class="payment-banner">
+        <div class="banner-content">
+            <i class="bi bi-piggy-bank-fill banner-icon"></i>
+            <div class="banner-text">
+                <span class="banner-title">💸 Rappel amical</span>
+                <span class="banner-message">
+                    Pour ceux qui n'ont pas encore payé et que je ne vois pas bientôt, 
+                    versement sur le compte : 
+                    <strong class="iban">BE83 0019 4377 4815</strong>
+                    &nbsp;Merci&nbsp;😉
+                </span>
+            </div>
+        </div>
+        <button class="banner-close" @onclick="CloseBanner" title="Fermer">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+}
+
+@code {
+    private bool showBanner = true;
+
+    private void CloseBanner()
+    {
+        showBanner = false;
+    }
+}
+
+<style>
+    .payment-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(253, 160, 133, 0.4);
+        animation: slideDown 0.4s ease-out;
+        gap: 1rem;
+    }
+
+    .banner-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+
+    .banner-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+        animation: bounce 2s infinite;
+    }
+
+    .banner-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .banner-title {
+        font-weight: bold;
+        font-size: 1rem;
+        color: #7d3c0a;
+    }
+
+    .banner-message {
+        font-size: 0.95rem;
+        color: #5d2e0c;
+        line-height: 1.4;
+    }
+
+    .iban {
+        background: rgba(255,255,255,0.5);
+        padding: 0.1rem 0.5rem;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 1rem;
+        letter-spacing: 1px;
+        color: #3d1a06;
+    }
+
+    .banner-close {
+        background: rgba(255,255,255,0.3);
+        border: none;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: all 0.2s;
+        color: #5d2e0c;
+        font-size: 0.9rem;
+    }
+
+    .banner-close:hover {
+        background: rgba(255,255,255,0.6);
+        transform: scale(1.1);
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-5px) rotate(-5deg); }
+        75% { transform: translateY(-5px) rotate(5deg); }
+    }
+
+    @@media (max-width: 768px) {
+        .payment-banner {
+            padding: 1rem;
+        }
+
+        .banner-message {
+            font-size: 0.85rem;
+        }
+
+        .iban {
+            display: block;
+            margin-top: 0.25rem;
+        }
+    }
+</style>
