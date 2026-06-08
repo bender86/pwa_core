@@ -1,15 +1,17 @@
 @page "/worldbet/bracket"
 @using dto.worldbet.Models
 @using dto.worldbet.Enums
+@using PWA.Auth.Components.worldbet.BracketMatchCard
 @layout WorldBetLayout
 @inject ITournamentService TournamentService
+@inject IPronosticService PronosticService
 @inject ISnackbar Snackbar
 @attribute [Authorize]
 
 <PageTitle>Tableau final — WorldBet 2026</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4 px-2">
-    <MudText Typo="Typo.h4" Class="mb-4">
+    <MudText Typo="Typo.h5" Class="mb-4">
         <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="me-2" />
         Tableau de la phase finale
     </MudText>
@@ -21,281 +23,313 @@
     else
     {
         <div class="bracket-scroll">
-            <div class="bracket">
-                @foreach (var round in rounds)
-                {
+            <div class="bracket-wrapper">
+
+                <!-- ===== GAUCHE : 16es → R8 → QF → SF ===== -->
+                <div class="bracket-side bracket-left">
+
+                    <!-- 16es gauche (MN 100-108, idx 0-7) -->
                     <div class="bracket-round">
-                        <div class="round-title">@round.Label</div>
-                        <div class="round-matches" style="--match-count: @round.Matches.Count;">
-                            @foreach (var match in round.Matches)
+                        <div class="round-label">Seizièmes</div>
+                        <div class="round-slots">
+                            @for (int i = 0; i < 8; i++)
                             {
-                                <div class="bracket-match-wrap">
-                                    <div class="bracket-match @(match.MatchId.HasValue ? "has-data" : "")">
-                                        <div class="bracket-team @(IsWinner(match, 1) ? "winner" : "") @(match.Team1Name == null ? "tbd" : "")">
-                                            <span class="team-name">@(match.Team1Name ?? "À déterminer")</span>
-                                            @if (match.ScoreTeam1.HasValue)
-                                            {
-                                                <span class="team-score">@match.ScoreTeam1</span>
-                                            }
-                                        </div>
-                                        <div class="bracket-team @(IsWinner(match, 2) ? "winner" : "") @(match.Team2Name == null ? "tbd" : "")">
-                                            <span class="team-name">@(match.Team2Name ?? "À déterminer")</span>
-                                            @if (match.ScoreTeam2.HasValue)
-                                            {
-                                                <span class="team-score">@match.ScoreTeam2</span>
-                                            }
-                                        </div>
-                                        @if (match.FinishedType.HasValue && match.FinishedType != MatchFinishedType.RegularTime)
-                                        {
-                                            <div class="match-extra">
-                                                @(match.FinishedType == MatchFinishedType.ExtraTime ? "a.p." : $"t.a.b.")
-                                            </div>
-                                        }
-                                    </div>
-                                    <div class="bracket-connector"></div>
+                                var idx = i;
+                                <div class="bracket-slot">
+                                    <BracketMatchCard
+                                        Match="@GetR16Match(idx)"
+                                        PlaceholderTeam1="@R32Structure[idx].Team1"
+                                        PlaceholderTeam2="@R32Structure[idx].Team2"
+                                        IsTbd="@IsTbd(idx)"
+                                        HasPronostic="@HasProno(GetR16Match(idx)?.MatchId)"
+                                        UserPronostic="@GetProno(GetR16Match(idx)?.MatchId)"
+                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                    <div class="connector-h"></div>
                                 </div>
                             }
                         </div>
                     </div>
-                }
 
-                <!-- Champion -->
-                <div class="bracket-champion">
-                    <div class="champion-icon">🏆</div>
-                    <div class="champion-label">Champion</div>
-                    <div class="champion-name">@(champion ?? "À déterminer")</div>
+                    <!-- R8 gauche (MN 120-123) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Huitièmes</div>
+                        <div class="round-slots slots-r8">
+                            @foreach (var mn in new[]{120, 121, 122, 123})
+                            {
+                                var m = GetMatchByNumber(mn);
+                                <div class="bracket-slot slot-paired">
+                                    <div class="connector-h"></div>
+                                    <BracketMatchCard
+                                        Match="@m"
+                                        PlaceholderTeam1="@GetR16Label(GetR16IdxForR8(mn, 0))"
+                                        PlaceholderTeam2="@GetR16Label(GetR16IdxForR8(mn, 1))"
+                                        IsTbd="@(m == null || IsTbdMatch(m))"
+                                        HasPronostic="@HasProno(m?.MatchId)"
+                                        UserPronostic="@GetProno(m?.MatchId)"
+                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                    <div class="connector-h"></div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- QF gauche (MN 130-131) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Quarts</div>
+                        <div class="round-slots slots-qf">
+                            @foreach (var mn in new[]{130, 131})
+                            {
+                                var m = GetMatchByNumber(mn);
+                                <div class="bracket-slot slot-paired">
+                                    <div class="connector-h"></div>
+                                    <BracketMatchCard
+                                        Match="@m"
+                                        PlaceholderTeam1="@($"V{GetR8PrevLabel(mn, 0)}")"
+                                        PlaceholderTeam2="@($"V{GetR8PrevLabel(mn, 1)}")"
+                                        IsTbd="@(m == null || IsTbdMatch(m))"
+                                        HasPronostic="@HasProno(m?.MatchId)"
+                                        UserPronostic="@GetProno(m?.MatchId)"
+                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                    <div class="connector-h"></div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- SF gauche (MN 140) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Demi-finales</div>
+                        <div class="round-slots slots-sf">
+                            @{ var sf140 = GetMatchByNumber(140); }
+                            <div class="bracket-slot slot-paired">
+                                <div class="connector-h"></div>
+                                <BracketMatchCard
+                                    Match="@sf140"
+                                    PlaceholderTeam1="V130"
+                                    PlaceholderTeam2="V131"
+                                    IsTbd="@(sf140 == null || IsTbdMatch(sf140))"
+                                    HasPronostic="@HasProno(sf140?.MatchId)"
+                                    UserPronostic="@GetProno(sf140?.MatchId)"
+                                    OnPronosticSaved="@HandlePronosticSaved" />
+                                <div class="connector-h"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- ===== CENTRE ===== -->
+                <div class="bracket-center">
+                    <div class="round-label">Finale</div>
+                    @{ var finalMatch = GetMatchByNumber(143); }
+                    <div class="final-slot">
+                        <BracketMatchCard
+                            Match="@finalMatch"
+                            PlaceholderTeam1="V140"
+                            PlaceholderTeam2="V141"
+                            IsTbd="@(finalMatch == null || IsTbdMatch(finalMatch))"
+                            HasPronostic="@HasProno(finalMatch?.MatchId)"
+                            UserPronostic="@GetProno(finalMatch?.MatchId)"
+                            OnPronosticSaved="@HandlePronosticSaved"
+                            IsHighlighted="true" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(champion))
+                    {
+                        <div class="champion-box mt-3">
+                            <div class="champion-trophy">🏆</div>
+                            <MudText Typo="Typo.h6" Align="Align.Center" Style="font-weight:700;">@champion</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">Champion 2026</MudText>
+                        </div>
+                    }
+
+                    <div class="third-place-slot mt-4">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center" Class="mb-1">3e place</MudText>
+                        @{ var thirdMatch = GetMatchByNumber(142); }
+                        <BracketMatchCard
+                            Match="@thirdMatch"
+                            PlaceholderTeam1="P140"
+                            PlaceholderTeam2="P141"
+                            IsTbd="@(thirdMatch == null || IsTbdMatch(thirdMatch))"
+                            HasPronostic="@HasProno(thirdMatch?.MatchId)"
+                            UserPronostic="@GetProno(thirdMatch?.MatchId)"
+                            OnPronosticSaved="@HandlePronosticSaved" />
+                    </div>
+                </div>
+
+                <!-- ===== DROITE : SF → QF → R8 → 16es ===== -->
+                <div class="bracket-side bracket-right">
+
+                    <!-- SF droite (MN 141) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Demi-finales</div>
+                        <div class="round-slots slots-sf">
+                            @{ var sf141 = GetMatchByNumber(141); }
+                            <div class="bracket-slot slot-paired">
+                                <div class="connector-h"></div>
+                                <BracketMatchCard
+                                    Match="@sf141"
+                                    PlaceholderTeam1="V132"
+                                    PlaceholderTeam2="V133"
+                                    IsTbd="@(sf141 == null || IsTbdMatch(sf141))"
+                                    HasPronostic="@HasProno(sf141?.MatchId)"
+                                    UserPronostic="@GetProno(sf141?.MatchId)"
+                                    OnPronosticSaved="@HandlePronosticSaved" />
+                                <div class="connector-h"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QF droite (MN 132-133) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Quarts</div>
+                        <div class="round-slots slots-qf">
+                            @foreach (var mn in new[]{132, 133})
+                            {
+                                var m = GetMatchByNumber(mn);
+                                <div class="bracket-slot slot-paired">
+                                    <div class="connector-h"></div>
+                                    <BracketMatchCard
+                                        Match="@m"
+                                        PlaceholderTeam1="@($"V{GetR8PrevLabel(mn, 0)}")"
+                                        PlaceholderTeam2="@($"V{GetR8PrevLabel(mn, 1)}")"
+                                        IsTbd="@(m == null || IsTbdMatch(m))"
+                                        HasPronostic="@HasProno(m?.MatchId)"
+                                        UserPronostic="@GetProno(m?.MatchId)"
+                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                    <div class="connector-h"></div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- R8 droite (MN 124-127) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Huitièmes</div>
+                        <div class="round-slots slots-r8">
+                            @foreach (var mn in new[]{124, 125, 126, 127})
+                            {
+                                var m = GetMatchByNumber(mn);
+                                <div class="bracket-slot slot-paired">
+                                    <div class="connector-h"></div>
+                                    <BracketMatchCard
+                                        Match="@m"
+                                        PlaceholderTeam1="@GetR16Label(GetR16IdxForR8(mn, 0))"
+                                        PlaceholderTeam2="@GetR16Label(GetR16IdxForR8(mn, 1))"
+                                        IsTbd="@(m == null || IsTbdMatch(m))"
+                                        HasPronostic="@HasProno(m?.MatchId)"
+                                        UserPronostic="@GetProno(m?.MatchId)"
+                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                    <div class="connector-h"></div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- 16es droite (MN 109-117, idx 8-15) -->
+                    <div class="bracket-round">
+                        <div class="round-label">Seizièmes</div>
+                        <div class="round-slots">
+                            @for (int i = 8; i < 16; i++)
+                            {
+                                var idx = i;
+                                <div class="bracket-slot">
+                                    <div class="connector-h"></div>
+                                    <BracketMatchCard
+                                        Match="@GetR16Match(idx)"
+                                        PlaceholderTeam1="@R32Structure[idx].Team1"
+                                        PlaceholderTeam2="@R32Structure[idx].Team2"
+                                        IsTbd="@IsTbd(idx)"
+                                        HasPronostic="@HasProno(GetR16Match(idx)?.MatchId)"
+                                        UserPronostic="@GetProno(GetR16Match(idx)?.MatchId)"
+                                        OnPronosticSaved="@HandlePronosticSaved" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     }
 </MudContainer>
 
-<style>
-    .bracket-scroll {
-        overflow-x: auto;
-        overflow-y: visible;
-        padding-bottom: 1rem;
-    }
-
-    .bracket {
-        display: flex;
-        align-items: stretch;
-        gap: 0;
-        min-width: 1200px;
-        min-height: 700px;
-        padding: 1rem 0.5rem;
-    }
-
-    .bracket-round {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 140px;
-    }
-
-    .round-title {
-        text-align: center;
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--mud-palette-text-secondary);
-        padding: 0 4px 8px;
-        border-bottom: 1px solid var(--mud-palette-divider);
-        margin-bottom: 8px;
-        white-space: nowrap;
-    }
-
-    .round-matches {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        justify-content: space-around;
-    }
-
-    .bracket-match-wrap {
-        display: flex;
-        align-items: center;
-        padding: 4px 0;
-    }
-
-    .bracket-match {
-        width: 130px;
-        flex-shrink: 0;
-        border: 1px solid var(--mud-palette-divider);
-        border-radius: 6px;
-        overflow: hidden;
-        background: var(--mud-palette-surface);
-        position: relative;
-    }
-
-    .bracket-match.has-data {
-        border-color: var(--mud-palette-primary-lighten);
-    }
-
-    .bracket-team {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 8px;
-        font-size: 11px;
-        min-height: 24px;
-        color: var(--mud-palette-text-primary);
-    }
-
-    .bracket-team:first-child {
-        border-bottom: 1px solid var(--mud-palette-divider);
-    }
-
-    .bracket-team.tbd {
-        color: var(--mud-palette-text-disabled);
-        font-style: italic;
-    }
-
-    .bracket-team.winner {
-        background: var(--mud-palette-success-lighten);
-        font-weight: 600;
-    }
-
-    .bracket-team.winner .team-name {
-        color: var(--mud-palette-success-darken);
-    }
-
-    .team-name {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 90px;
-    }
-
-    .team-score {
-        font-size: 11px;
-        font-weight: 600;
-        background: var(--mud-palette-background-grey);
-        border-radius: 3px;
-        padding: 0 4px;
-        min-width: 18px;
-        text-align: center;
-        flex-shrink: 0;
-    }
-
-    .match-extra {
-        font-size: 9px;
-        color: var(--mud-palette-info);
-        text-align: center;
-        padding: 2px 0;
-        border-top: 1px solid var(--mud-palette-divider);
-        background: var(--mud-palette-info-lighten);
-    }
-
-    .bracket-connector {
-        width: 20px;
-        flex-shrink: 0;
-    }
-
-    .bracket-champion {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-width: 90px;
-        padding: 0 8px;
-    }
-
-    .champion-icon {
-        font-size: 28px;
-        margin-bottom: 6px;
-    }
-
-    .champion-label {
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--mud-palette-text-secondary);
-    }
-
-    .champion-name {
-        font-size: 12px;
-        font-style: italic;
-        color: var(--mud-palette-text-disabled);
-        text-align: center;
-        margin-top: 4px;
-    }
-
-    .champion-name.known {
-        font-style: normal;
-        font-weight: 600;
-        color: var(--mud-palette-warning-darken);
-    }
-</style>
-
 @code {
     private bool isLoading = true;
-    private List<BracketRound> rounds = new();
+    private List<MatchDto> allMatches = new();
+    private List<MatchDto> r16Matches = new();
+    private Dictionary<int, PronosticDto> userPronostics = new();
     private string? champion;
+    private int[] r16MatchNumbers = Array.Empty<int>();
 
-    // Phase names as stored in DB — adjust to match your MatchPhase.Name values
-    private static readonly string[] KnockoutPhaseNames =
+    private const string TbdName = "TBD1";
+
+    // R32Structure trié par MatchNumber (100→117)
+    // Gauche : idx 0-7 (MN 100-108), Droite : idx 8-15 (MN 109-117)
+    private static readonly (string Team1, string Team2)[] R32Structure =
     [
-        "Seizièmes de finale",
-        "Huitièmes de finale",
-        "Quarts de finale",
-        "Demi-finales",
-        "Finale"
+        ("1er Groupe E", "3e A/B/C/D/F"),   // idx 0 → MN 100
+        ("1er Groupe I", "3e C/D/F/G/H"),   // idx 1 → MN 101
+        ("2e Groupe A",  "2e Groupe B"),     // idx 2 → MN 102
+        ("1er Groupe F", "2e Groupe C"),     // idx 3 → MN 104
+        ("2e Groupe K",  "2e Groupe L"),     // idx 4 → MN 105
+        ("1er Groupe H", "2e Groupe J"),     // idx 5 → MN 106
+        ("1er Groupe D", "3e B/E/F/I/J"),   // idx 6 → MN 107
+        ("1er Groupe G", "3e A/E/H/I/J"),   // idx 7 → MN 108
+        ("1er Groupe C", "2e Groupe F"),     // idx 8  → MN 109
+        ("2e Groupe E",  "2e Groupe I"),     // idx 9  → MN 110
+        ("1er Groupe A", "3e C/E/F/H/I"),   // idx 10 → MN 111
+        ("1er Groupe L", "3e E/H/I/J/K"),   // idx 11 → MN 112
+        ("1er Groupe J", "2e Groupe H"),     // idx 12 → MN 114
+        ("2e Groupe D",  "2e Groupe G"),     // idx 13 → MN 115
+        ("1er Groupe B", "3e E/F/G/I/J"),   // idx 14 → MN 116
+        ("1er Groupe K", "3e D/E/I/J/L"),   // idx 15 → MN 117
     ];
 
-    // Fixed structure for 1/32 — displayed even without DB data
-    private static readonly (string Team1, string Team2)[] R32Structure =
-[
-    ("2e Groupe A",  "2e Groupe B"),       // Dim 28 juil.
-    ("1er Groupe E", "3e A/B/C/D/F"),      // Lun 29 juil.
-    ("1er Groupe C", "2e Groupe F"),
-    ("1er Groupe I", "3e C/D/F/G/H"),      // Mar 30 juil.
-    ("1er Groupe F", "2e Groupe C"),
-    ("2e Groupe E",  "2e Groupe I"),
-    ("1er Groupe G", "3e A/E/H/I/J"),      // Mer 1er juil.
-    ("1er Groupe A", "3e C/E/F/H/I"),
-    ("1er Groupe L", "3e E/H/I/J/K"),
-    ("1er Groupe H", "2e Groupe J"),       // Jeu 2 juil.
-    ("1er Groupe D", "3e B/E/F/I/J"),
-    ("2e Groupe K",  "2e Groupe L"),       // Ven 3 juil.
-    ("2e Groupe D",  "2e Groupe G"),
-    ("1er Groupe B", "3e E/F/G/I/J"),
-    ("1er Groupe J", "2e Groupe H"),       // Sam 4 juil.
-    ("1er Groupe K", "3e D/E/I/J/L"),
-];
+    // Correspondance R8 → deux R16 qui l'alimentent (MatchNumbers)
+    private static readonly Dictionary<int, (int R16a, int R16b)> R8ToR16 = new()
+    {
+        [120] = (100, 101),
+        [121] = (102, 104),
+        [122] = (105, 106),
+        [123] = (107, 108),
+        [124] = (109, 110),
+        [125] = (111, 112),
+        [126] = (114, 115),
+        [127] = (116, 117),
+    };
+
+    // Correspondance QF → deux R8 qui l'alimentent
+    private static readonly Dictionary<int, (int R8a, int R8b)> QFToR8 = new()
+    {
+        [130] = (120, 121),
+        [131] = (122, 123),
+        [132] = (124, 125),
+        [133] = (126, 127),
+    };
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadBracket();
+        await Task.WhenAll(LoadMatches(), LoadPronostics());
     }
 
-    private async Task LoadBracket()
+    private async Task LoadMatches()
     {
         isLoading = true;
         try
         {
-            var allMatches = await TournamentService.GetAllMatchesAsync();
+            allMatches = await TournamentService.GetAllMatchesAsync();
 
-            // Group knockout matches by phase
-            var knockoutByPhase = allMatches
-                .Where(m => KnockoutPhaseNames.Contains(m.PhaseName))
-                .GroupBy(m => m.PhaseName)
-                .ToDictionary(g => g.Key, g => g.OrderBy(m => m.MatchNumber).ToList());
+            r16Matches = allMatches
+                .Where(m => m.PhaseName == "Round of 16")
+                .OrderBy(m => m.MatchNumber)
+                .ToList();
 
-            rounds = BuildRounds(knockoutByPhase);
-
-            // Champion = winner of the final
-            var final = knockoutByPhase.GetValueOrDefault("Finale")?.FirstOrDefault();
-            if (final?.Status == MatchStatus.Finished && final.ScoreTeam1.HasValue && final.ScoreTeam2.HasValue)
-            {
-                champion = final.ScoreTeam1 > final.ScoreTeam2
-                    ? final.Team1Name
-                    : final.ScoreTeam2 > final.ScoreTeam1
-                        ? final.Team2Name
-                        : GetPenaltyWinner(final);
-            }
+            r16MatchNumbers = r16Matches.Select(m => m.MatchNumber).ToArray();
+            ComputeChampion();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erreur lors du chargement : {ex.Message}", Severity.Error);
+            Snackbar.Add($"Erreur : {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -303,89 +337,204 @@
         }
     }
 
-    private List<BracketRound> BuildRounds(Dictionary<string, List<MatchDto>> byPhase)
+    private async Task LoadPronostics()
     {
-        var result = new List<BracketRound>();
-
-        // Round of 32 — use fixed structure, overlay with DB data if available
-        var r32Matches = byPhase.GetValueOrDefault("Seizièmes de finale") ?? new();
-        var r32 = new BracketRound { Label = "Seizièmes" };
-
-        for (int i = 0; i < R32Structure.Length; i++)
+        try
         {
-            var dbMatch = r32Matches.ElementAtOrDefault(i);
-            r32.Matches.Add(dbMatch != null
-                ? ToBracketMatch(dbMatch)
-                : new BracketMatch { Team1Name = R32Structure[i].Team1, Team2Name = R32Structure[i].Team2 });
+            var pronostics = await PronosticService.GetMyPronosticsAsync();
+            userPronostics = pronostics.ToDictionary(p => p.MatchId, p => p);
         }
-        result.Add(r32);
-
-        // Remaining rounds
-        var phaseLabels = new Dictionary<string, string>
-        {
-            ["Seizièmes de finale"] = "16es",
-            ["Huitièmes de finale"] = "8es",
-            ["Quarts de finale"]    = "Quarts",
-            ["Demi-finales"]        = "Demies",
-            ["Finale"]              = "Finale",
-        };
-
-        foreach (var (phaseName, label) in phaseLabels)
-        {
-            var dbMatches = byPhase.GetValueOrDefault(phaseName) ?? new();
-            int expectedCount = phaseName switch
-            {
-                "Seizièmes de finale" => 16, 
-                "Huitièmes de finale" => 8,
-                "Quarts de finale"    => 4,
-                "Demi-finales"        => 2,
-                "Finale"              => 1,
-                _                     => 0
-            };
-
-            var round = new BracketRound { Label = label };
-
-            for (int i = 0; i < expectedCount; i++)
-            {
-                var dbMatch = dbMatches.ElementAtOrDefault(i);
-                round.Matches.Add(dbMatch != null
-                    ? ToBracketMatch(dbMatch)
-                    : new BracketMatch());
-            }
-            result.Add(round);
-        }
-
-        return result;
+        catch { }
     }
 
-    private static BracketMatch ToBracketMatch(MatchDto m) => new()
+    private void ComputeChampion()
     {
-        MatchId      = m.MatchId,
-        Team1Name    = m.Team1Name,
-        Team2Name    = m.Team2Name,
-        ScoreTeam1   = m.ScoreTeam1,
-        ScoreTeam2   = m.ScoreTeam2,
-        Status       = m.Status,
-        FinishedType = m.FinishedType,
-        PenaltyWinnerTeam = m.PenaltyWinnerTeam
-    };
-
-    private static bool IsWinner(BracketMatch match, int team)
-    {
-        if (match.Status != MatchStatus.Finished) return false;
-        if (!match.ScoreTeam1.HasValue || !match.ScoreTeam2.HasValue) return false;
-
-        if (team == 1) return match.ScoreTeam1 > match.ScoreTeam2
-            || (match.ScoreTeam1 == match.ScoreTeam2 && match.PenaltyWinnerTeam == 1);
-
-        return match.ScoreTeam2 > match.ScoreTeam1
-            || (match.ScoreTeam1 == match.ScoreTeam2 && match.PenaltyWinnerTeam == 2);
+        var final = GetMatchByNumber(143);
+        if (final?.Status == MatchStatus.Finished && final.ScoreTeam1.HasValue && final.ScoreTeam2.HasValue)
+        {
+            champion = final.ScoreTeam1 > final.ScoreTeam2 ? final.Team1Name
+                : final.ScoreTeam2 > final.ScoreTeam1 ? final.Team2Name
+                : final.PenaltyWinnerTeam == 1 ? final.Team1Name
+                : final.Team2Name;
+        }
     }
 
-    private static string? GetPenaltyWinner(MatchDto match) => match.PenaltyWinnerTeam switch
+    // ===== Helpers =====
+
+    private MatchDto? GetMatchByNumber(int mn)
+        => allMatches.FirstOrDefault(m => m.MatchNumber == mn);
+
+    private MatchDto? GetR16Match(int idx)
+        => r16Matches.ElementAtOrDefault(idx);
+
+    private bool IsTbd(int idx)
     {
-        1 => match.Team1Name,
-        2 => match.Team2Name,
-        _ => null
-    };
+        var m = GetR16Match(idx);
+        return m == null || IsTbdMatch(m);
+    }
+
+    private bool IsTbdMatch(MatchDto m)
+        => m.Team1Name == TbdName || m.Team2Name == TbdName
+        || string.IsNullOrEmpty(m.Team1Name) || string.IsNullOrEmpty(m.Team2Name);
+
+    // Label placeholder pour R8 : "N°100" / "N°101"
+    private string GetR16Label(int r16Idx)
+    {
+        var mn = r16MatchNumbers.ElementAtOrDefault(r16Idx);
+        return mn > 0 ? $"N°{mn}" : "TBD";
+    }
+
+    // Index R16 (0-15) à partir du MatchNumber R16
+    private int GetR16IdxByMN(int mn)
+        => Array.IndexOf(r16MatchNumbers, mn);
+
+    // Pour un R8 (mn) et position (0=équipe1, 1=équipe2), retourne l'index R16
+    private int GetR16IdxForR8(int r8mn, int pos)
+    {
+        if (!R8ToR16.TryGetValue(r8mn, out var pair)) return -1;
+        var targetMN = pos == 0 ? pair.R16a : pair.R16b;
+        return GetR16IdxByMN(targetMN);
+    }
+
+    // Pour un QF (mn) et position, retourne le MatchNumber R8
+    private int GetR8PrevLabel(int qfmn, int pos)
+    {
+        if (!QFToR8.TryGetValue(qfmn, out var pair)) return 0;
+        return pos == 0 ? pair.R8a : pair.R8b;
+    }
+
+    private bool HasProno(int? matchId)
+        => matchId.HasValue && userPronostics.ContainsKey(matchId.Value);
+
+    private PronosticDto? GetProno(int? matchId)
+        => matchId.HasValue && userPronostics.TryGetValue(matchId.Value, out var p) ? p : null;
+
+    private async Task HandlePronosticSaved(PronosticDto prono)
+    {
+        userPronostics[prono.MatchId] = prono;
+        await InvokeAsync(StateHasChanged);
+    }
 }
+
+<style>
+    .bracket-scroll {
+        overflow-x: auto;
+        overflow-y: visible;
+        padding-bottom: 2rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bracket-wrapper {
+        display: flex;
+        align-items: center;  /* Centre verticalement tout le contenu */
+        min-width: 1600px;
+        padding: 1rem 0.5rem;
+        gap: 0;
+    }
+
+    /* ===== SIDES ===== */
+    .bracket-side {
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+    }
+
+    /* ===== ROUNDS ===== */
+    .bracket-round {
+        display: flex;
+        flex-direction: column;
+        min-width: 200px;
+        max-width: 220px;
+    }
+
+    .round-label {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--mud-palette-text-secondary);
+        padding: 0 4px 8px;
+        border-bottom: 1px solid var(--mud-palette-divider);
+        margin-bottom: 8px;
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* ===== SLOTS ===== */
+    .round-slots {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        justify-content: space-around;
+    }
+
+    /* Espacement selon la phase */
+    .slots-r8  { gap: 16px; }
+    .slots-qf  { gap: 100px; }
+    .slots-sf  { gap: 240px; }
+
+    /* Espacement entre les 16es */
+    .round-slots:not(.slots-r8):not(.slots-qf):not(.slots-sf) {
+        gap: 8px;
+    }
+
+    .bracket-slot {
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+
+    /* Slots avec connecteur des deux côtés */
+    .slot-paired {
+        justify-content: center;
+    }
+
+    /* ===== CONNECTEURS ===== */
+    .connector-h {
+        width: 12px;
+        height: 2px;
+        background: var(--mud-palette-divider);
+        flex-shrink: 0;
+    }
+
+    /* ===== CENTRE ===== */
+    .bracket-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 240px;
+        padding: 0 8px;
+        align-self: center;  /* Centre verticalement dans le wrapper */
+    }
+
+    .final-slot, .third-place-slot {
+        width: 100%;
+    }
+
+    .third-place-slot {
+        opacity: 0.85;
+        margin-top: 2rem;
+    }
+
+    .champion-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+        border-radius: 12px;
+        padding: 1rem;
+        width: 100%;
+    }
+
+    .champion-trophy {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        animation: bounce 2s infinite;
+    }
+
+    @@keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+</style>

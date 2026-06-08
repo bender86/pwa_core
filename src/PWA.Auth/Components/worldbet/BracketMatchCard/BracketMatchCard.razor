@@ -1,0 +1,131 @@
+@* Components/WorldBet/BracketMatchCard/BracketMatchCard.razor *@
+@namespace PWA.Auth.Components.worldbet.BracketMatchCard
+@using dto.worldbet.Models
+@using dto.worldbet.Enums
+@using PWA.Auth.Components.worldbet.MatchCard
+
+@if (IsTbd || Match == null)
+{
+    <!-- Placeholder TBD -->
+    <MudPaper Elevation="@(IsHighlighted ? 4 : 1)"
+              Class="@($"bracket-card tbd {(IsHighlighted ? "highlighted" : "")}")">
+        <div class="bracket-team-row">
+            <span class="bracket-team-name tbd-text">@PlaceholderTeam1</span>
+        </div>
+        <MudDivider />
+        <div class="bracket-team-row">
+            <span class="bracket-team-name tbd-text">@PlaceholderTeam2</span>
+        </div>
+        @if (Match != null)
+        {
+            <div class="bracket-date">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                @Match.ScheduledDate.ToString("dd/MM HH:mm")
+            </div>
+        }
+    </MudPaper>
+}
+else
+{
+    <!-- Vrai MatchCard en mode compact -->
+    <div class="bracket-card-wrapper @(IsHighlighted ? "highlighted-wrapper" : "")">
+        <MatchCard Match="@Match"
+                   HasPronostic="@HasPronostic"
+                   UserPronostic="@UserPronostic"
+                   OnPronosticSaved="@OnPronosticSaved" />
+    </div>
+}
+
+@code {
+    [Parameter] public MatchDto? Match { get; set; }
+    [Parameter] public string PlaceholderTeam1 { get; set; } = "À déterminer";
+    [Parameter] public string PlaceholderTeam2 { get; set; } = "À déterminer";
+    [Parameter] public bool IsTbd { get; set; } = true;
+    [Parameter] public bool IsHighlighted { get; set; } = false;
+    [Parameter] public bool HasPronostic { get; set; }
+    [Parameter] public PronosticDto? UserPronostic { get; set; }
+    [Parameter] public EventCallback<PronosticDto> OnPronosticSaved { get; set; }
+}
+
+<style>
+    .bracket-card {
+        width: 190px;
+        border-radius: 6px;
+        overflow: hidden;
+        font-size: 11px;
+    }
+
+    .bracket-card.highlighted {
+        border: 2px solid var(--mud-palette-warning);
+        box-shadow: 0 0 12px rgba(255, 193, 7, 0.4);
+    }
+
+    .bracket-team-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 8px;
+        min-height: 26px;
+    }
+
+    .bracket-team-name {
+        font-size: 11px;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 140px;
+    }
+
+    .tbd-text {
+        color: var(--mud-palette-text-disabled);
+        font-style: italic;
+        font-size: 10px;
+    }
+
+    .bracket-date {
+        padding: 3px 8px;
+        font-size: 9px;
+        color: var(--mud-palette-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        border-top: 1px solid var(--mud-palette-divider);
+    }
+
+    /* MatchCard en mode compact */
+    .bracket-card-wrapper {
+        width: 190px;
+        font-size: 11px;
+    }
+
+    .bracket-card-wrapper :deep(.mud-paper) {
+        font-size: 11px;
+    }
+
+    .bracket-card-wrapper :deep(.mud-text) {
+        font-size: 11px !important;
+    }
+
+    .bracket-card-wrapper :deep(.team-flag) {
+        width: 24px;
+        height: 16px;
+    }
+
+    .bracket-card-wrapper :deep(.mud-chip) {
+        font-size: 9px;
+        height: 18px;
+    }
+
+    .bracket-card-wrapper :deep(h4),
+    .bracket-card-wrapper :deep(h5),
+    .bracket-card-wrapper :deep(h6) {
+        font-size: 14px !important;
+    }
+
+    .highlighted-wrapper {
+        box-shadow: 0 0 16px rgba(255, 193, 7, 0.5);
+        border-radius: 8px;
+        border: 2px solid var(--mud-palette-warning);
+    }
+</style>
