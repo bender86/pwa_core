@@ -243,12 +243,24 @@
 
     // Fixed structure for 1/32 — displayed even without DB data
     private static readonly (string Team1, string Team2)[] R32Structure =
-    [
-        ("1A", "Meill. 3e"), ("2B", "2C"),     ("1C", "Meill. 3e"), ("2A", "2B"),
-        ("1B", "Meill. 3e"), ("2D", "2E"),     ("1E", "Meill. 3e"), ("2F", "2G"),
-        ("1G", "Meill. 3e"), ("2H", "2I"),     ("1I", "Meill. 3e"), ("2J", "2K"),
-        ("1K", "Meill. 3e"), ("2L", "2A"),     ("1D", "Meill. 3e"), ("1F", "Meill. 3e"),
-    ];
+[
+    ("2e Groupe A",  "2e Groupe B"),       // Dim 28 juil.
+    ("1er Groupe E", "3e A/B/C/D/F"),      // Lun 29 juil.
+    ("1er Groupe C", "2e Groupe F"),
+    ("1er Groupe I", "3e C/D/F/G/H"),      // Mar 30 juil.
+    ("1er Groupe F", "2e Groupe C"),
+    ("2e Groupe E",  "2e Groupe I"),
+    ("1er Groupe G", "3e A/E/H/I/J"),      // Mer 1er juil.
+    ("1er Groupe A", "3e C/E/F/H/I"),
+    ("1er Groupe L", "3e E/H/I/J/K"),
+    ("1er Groupe H", "2e Groupe J"),       // Jeu 2 juil.
+    ("1er Groupe D", "3e B/E/F/I/J"),
+    ("2e Groupe K",  "2e Groupe L"),       // Ven 3 juil.
+    ("2e Groupe D",  "2e Groupe G"),
+    ("1er Groupe B", "3e E/F/G/I/J"),
+    ("1er Groupe J", "2e Groupe H"),       // Sam 4 juil.
+    ("1er Groupe K", "3e D/E/I/J/L"),
+];
 
     protected override async Task OnInitializedAsync()
     {
@@ -311,9 +323,10 @@
         // Remaining rounds
         var phaseLabels = new Dictionary<string, string>
         {
-            ["Huitièmes de finale"] = "Huitièmes",
+            ["Seizièmes de finale"] = "16es",
+            ["Huitièmes de finale"] = "8es",
             ["Quarts de finale"]    = "Quarts",
-            ["Demi-finales"]        = "Demi-finales",
+            ["Demi-finales"]        = "Demies",
             ["Finale"]              = "Finale",
         };
 
@@ -322,6 +335,7 @@
             var dbMatches = byPhase.GetValueOrDefault(phaseName) ?? new();
             int expectedCount = phaseName switch
             {
+                "Seizièmes de finale" => 16, 
                 "Huitièmes de finale" => 8,
                 "Quarts de finale"    => 4,
                 "Demi-finales"        => 2,
