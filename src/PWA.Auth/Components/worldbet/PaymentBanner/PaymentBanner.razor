@@ -1,5 +1,5 @@
 @namespace PWA.Auth.Components.worldbet.PaymentBanner
-@if (showBanner)
+@if (showBanner && !IsPaid)
 {
     <div class="payment-banner">
         <div class="banner-content">
@@ -21,6 +21,8 @@
 }
 
 @code {
+    [Parameter]
+    public bool IsPaid { get; set; } = false;
     private bool showBanner = true;
 
     private void CloseBanner()
