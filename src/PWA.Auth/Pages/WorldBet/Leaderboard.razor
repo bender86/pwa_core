@@ -199,6 +199,7 @@
                             <tr class="clickable-row @(IsCurrentPlayer(player) ? "current-player" : "")"
                                 @onclick="() => Navigation.NavigateTo(GetPlayerLink(player.PlayerId))"
                                 style="cursor: pointer;">
+>
                                 <td>
                                     <div class="d-flex align-center gap-1">
                                         @if (player.Rank == 1)
@@ -282,22 +283,15 @@
         {
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
-
-            // Utilise NameIdentifier (= MaesAuthUserId = 3)
-            var userIdClaim = user.FindFirst(
-                System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = user.FindFirst("id")?.Value;
 
             if (int.TryParse(userIdClaim, out int userId))
             {
                 currentPlayerId = userId;
             }
 
-
             leaderboard = await LeaderboardService.GetLeaderboardAsync();
-
-
             currentPlayerRanking = leaderboard.FirstOrDefault(p => p.PlayerId == currentPlayerId);
-            Console.WriteLine($"currentPlayerRanking: {currentPlayerRanking?.DisplayName ?? "NOT FOUND"}");
         }
         catch (Exception ex)
         {

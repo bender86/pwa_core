@@ -1,21 +1,106 @@
 @inherits LayoutComponentBase
 @layout MainLayout
+@inject IJSRuntime JSRuntime
+@inject ITournamentService TournamentService
+@implements IAsyncDisposable
 
 <div class="worldbet-header">
     <div class="badge-container d-none d-sm-flex">
-        <div class="trophy-icon"> <i class="bi bi-trophy-fill"></i></div>
+        <div class="trophy-icon"><i class="bi bi-trophy-fill"></i></div>
         <div class="title-group">
             <h2>WorldBet</h2>
             <span class="year">2026</span>
         </div>
     </div>
-    @* <p class="tagline">Pronostiquez et gagnez entre amis</p> *@
     <WorldBetNavigation />
     
     <div class="worldbet-content">
         @Body
     </div>
 </div>
+
+@code {
+    private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<WorldBetLayout>? _dotNetRef;
+    private Timer? _refreshTimer;
+
+    // Event pour notifier les pages enfants qu'il faut rafraîchir
+    public static event Func<Task>? OnRefreshRequested;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialiser pull-to-refresh
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/pwaUtils.js");
+            await _jsModule.InvokeVoidAsync("initPullToRefresh", _dotNetRef);
+
+            // Auto-refresh toutes les 30 secondes
+            _refreshTimer = new Timer(async _ =>
+            {
+                await CheckAndRefresh();
+            }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        }
+    }
+
+    // Appelé par le JS quand on tire vers le bas
+    [JSInvokable]
+    public async Task OnPullToRefresh()
+    {
+        Console.WriteLine("🔄 Pull to refresh triggered!");
+        await TriggerRefresh();
+    }
+
+    // Vérifie si un match vient de commencer
+    private async Task CheckAndRefresh()
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            var upcoming = await TournamentService.GetUpcomingMatchesAsync(10);
+
+            bool matchJustStarted = upcoming.Any(m =>
+                m.ScheduledDate <= now &&
+                m.ScheduledDate >= now.AddMinutes(-6));
+
+            if (matchJustStarted)
+            {
+                Console.WriteLine("🔄 Auto-refresh: match just started!");
+                await TriggerRefresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ CheckAndRefresh error: {ex.Message}");
+        }
+    }
+
+    private async Task TriggerRefresh()
+    {
+        if (OnRefreshRequested != null)
+        {
+            await InvokeAsync(async () =>
+            {
+                await OnRefreshRequested.Invoke();
+                StateHasChanged();
+            });
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _refreshTimer?.Dispose();
+        _dotNetRef?.Dispose();
+
+        if (_jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("disposePullToRefresh");
+            await _jsModule.DisposeAsync();
+        }
+    }
+}
 
 <style>
     .worldbet-header {
@@ -70,6 +155,7 @@
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-10px); }
     }
+
     @@media (max-width: 768px) {
         .badge-container {
             flex-direction: column;

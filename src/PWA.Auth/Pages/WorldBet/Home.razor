@@ -145,6 +145,8 @@
     </div>
 </div>
 
+@implements IDisposable
+
 @code {
     // Carousel Upcoming
     private MudCarousel<object>? carouselUpcoming;
@@ -163,14 +165,33 @@
     private bool isLoadingUpcoming = true;
     private bool isLoadingRecent = true;
     private bool isPaid = false;
+
     protected override async Task OnInitializedAsync()
     {
+        // Abonnement au refresh du layout
+        WorldBetLayout.OnRefreshRequested += RefreshPage;
+
         await Task.WhenAll(
             LoadUpcomingMatches(),
             LoadRecentMatches(),
             LoadPronostics(),
             LoadUserInfo()
         );
+    }
+
+    private async Task RefreshPage()
+    {
+        await Task.WhenAll(
+            LoadUpcomingMatches(),
+            LoadRecentMatches(),
+            LoadPronostics()
+        );
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        WorldBetLayout.OnRefreshRequested -= RefreshPage;
     }
 
     private async Task LoadUserInfo()
@@ -245,31 +266,15 @@
 
     private void PauseCarousel(bool isUpcoming)
     {
-        if (isUpcoming)
-        {
-            Console.WriteLine("Pausing upcoming carousel - modal opened");
-            isCarouselUpcomingAutoPlaying = false;
-        }
-        else
-        {
-            Console.WriteLine("Pausing recent carousel - modal opened");
-            isCarouselRecentAutoPlaying = false;
-        }
+        if (isUpcoming) isCarouselUpcomingAutoPlaying = false;
+        else isCarouselRecentAutoPlaying = false;
         StateHasChanged();
     }
 
     private void ResumeCarousel(bool isUpcoming)
     {
-        if (isUpcoming)
-        {
-            Console.WriteLine("Resuming upcoming carousel - modal closed");
-            isCarouselUpcomingAutoPlaying = true;
-        }
-        else
-        {
-            Console.WriteLine("Resuming recent carousel - modal closed");
-            isCarouselRecentAutoPlaying = true;
-        }
+        if (isUpcoming) isCarouselUpcomingAutoPlaying = true;
+        else isCarouselRecentAutoPlaying = true;
         StateHasChanged();
     }
 }
