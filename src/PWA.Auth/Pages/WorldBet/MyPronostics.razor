@@ -169,7 +169,7 @@
                 IsEditMode="true"
                 OnSubmit="SaveMatch"
                 OnCancel="CloseModal" />
-
+@implements IDisposable
 @code {
     private List<PronosticDto> pronostics = new();
     private List<PronosticDto> filteredPronostics = new();
@@ -215,6 +215,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Abonnement au refresh du layout
+        WorldBetLayout.OnRefreshRequested += RefreshPage;
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         isAdmin = authState.User.IsInRole("Admin");
 
@@ -228,6 +230,16 @@
         }
 
         await LoadData();
+    }
+
+    private async Task RefreshPage()
+    {
+        await LoadData();
+    }
+
+    public void Dispose()
+    {
+        WorldBetLayout.OnRefreshRequested -= RefreshPage;
     }
 
     private async Task LoadData()

@@ -141,7 +141,7 @@
                 IsEditMode="@isEditMode"
                 OnSubmit="SaveMatch"
                 OnCancel="CloseModal" />
-
+@implements IDisposable
 @code {
     // Dialog options
     private DialogOptions dialogOptions = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
@@ -181,9 +181,23 @@
     
     protected override async Task OnInitializedAsync()
     {
+        // Abonnement au refresh du layout
+        WorldBetLayout.OnRefreshRequested += RefreshPage;
         await CheckUserRole();
         await LoadAllData();
         await HandleOpenPronoParam();
+    }
+
+    private async Task RefreshPage()
+    {
+        await CheckUserRole();
+        await LoadAllData();
+        await HandleOpenPronoParam();
+    }
+
+    public void Dispose()
+    {
+        WorldBetLayout.OnRefreshRequested -= RefreshPage;
     }
 
     private async Task CheckUserRole()

@@ -285,6 +285,7 @@
     }
 </MudContainer>
 
+@implements IDisposable
 @code {
     private bool isLoading = true;
     private bool isAdmin = false;
@@ -338,12 +339,23 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Abonnement au refresh du layout
+        WorldBetLayout.OnRefreshRequested += RefreshPage;
         var user = await AuthService.GetCurrentUserAsync();
         isAdmin = user?.Admin ?? false;
 
         await Task.WhenAll(LoadMatches(), LoadPronostics());
     }
 
+    private async Task RefreshPage()
+    {
+        await Task.WhenAll(LoadMatches(), LoadPronostics());
+    }
+
+    public void Dispose()
+    {
+        WorldBetLayout.OnRefreshRequested -= RefreshPage;
+    }
     private async Task LoadMatches()
     {
         isLoading = true;

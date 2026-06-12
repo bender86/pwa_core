@@ -201,6 +201,7 @@
                 OnSubmit="SaveMatch"
                 OnCancel="CloseModal" />
 
+@implements IDisposable
 @code {
     private List<string> groups = new();
     private string selectedGroup = "";
@@ -224,10 +225,25 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Abonnement au refresh du layout
+        WorldBetLayout.OnRefreshRequested += RefreshPage;
+
         await CheckUserRole();
         await LoadGroups();
         if (isAdmin)
             await LoadTeamsAndPhases();
+    }
+
+    private async Task RefreshPage()
+    {
+        if (!string.IsNullOrEmpty(selectedGroup))
+            await SelectGroup(selectedGroup);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        WorldBetLayout.OnRefreshRequested -= RefreshPage;
     }
 
     private async Task CheckUserRole()
