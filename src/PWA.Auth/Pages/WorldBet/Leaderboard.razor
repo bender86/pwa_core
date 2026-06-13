@@ -199,7 +199,6 @@
                             <tr class="clickable-row @(IsCurrentPlayer(player) ? "current-player" : "")"
                                 @onclick="() => Navigation.NavigateTo(GetPlayerLink(player.PlayerId))"
                                 style="cursor: pointer;">
->
                                 <td>
                                     <div class="d-flex align-center gap-1">
                                         @if (player.Rank == 1)
